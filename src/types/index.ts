@@ -28,7 +28,6 @@ export type Page =
   | 'persona-manager'
   | 'scheduler'
   // System
-  | 'iris'
   | 'settings';
 
 export interface Bot {

@@ -14,7 +14,6 @@ import CustomerService from './pages/CustomerService';
 import Feedback from './pages/Feedback';
 import ReportsFlags from './pages/ReportsFlags';
 import Announcements from './pages/Announcements';
-import IRIS from './pages/IRIS';
 import Settings from './pages/Settings';
 import ProfileAnalytics from './pages/ProfileAnalytics';
 import ProfileInsights from './pages/ProfileInsights';
@@ -58,7 +57,6 @@ function PageRenderer({ page }: { page: Page }) {
     case 'persona-manager':     return <PersonaManager />;
     case 'scheduler':           return <Scheduler />;
     // System
-    case 'iris':                return <IRIS />;
     case 'settings':            return <Settings />;
     default:                    return <Overview />;
   }

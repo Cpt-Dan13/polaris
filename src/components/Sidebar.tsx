@@ -41,7 +41,6 @@ const navItems: NavItem[] = [
   { id: 'bot-management',      label: 'Bot Management',      icon: Bot,             group: 'Developer' },
   { id: 'scheduler',           label: 'Scheduler',           icon: Clock,           group: 'Developer' },
 
-  { id: 'iris',                label: 'IRIS',                icon: Sparkles,        group: 'System' },
   { id: 'settings',            label: 'Settings',            icon: Settings,        group: 'System' },
 ];
 
