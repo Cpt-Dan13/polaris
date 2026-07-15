@@ -19,6 +19,8 @@ import IRIS from './pages/IRIS';
 import Settings from './pages/Settings';
 import ProfileAnalytics from './pages/ProfileAnalytics';
 import ProfileInsights from './pages/ProfileInsights';
+import Growth from './pages/Growth';
+import ActiveUsers from './pages/ActiveUsers';
 import ComingSoon from './pages/ComingSoon';
 
 function PageRenderer({ page }: { page: Page }) {
@@ -28,8 +30,8 @@ function PageRenderer({ page }: { page: Page }) {
     case 'swipe-analytics':     return <ComingSoon title="Swipe Analytics" />;
     case 'profile-analytics':   return <ProfileAnalytics />;
     case 'profile-insights':    return <ProfileInsights />;
-    case 'growth':              return <ComingSoon title="Growth" />;
-    case 'active-users':        return <ComingSoon title="Active Users" />;
+    case 'growth':              return <Growth />;
+    case 'active-users':        return <ActiveUsers />;
     // Finance
     case 'subscriptions':       return <ComingSoon title="Subscriptions" />;
     case 'revenue':             return <ComingSoon title="Revenue" />;

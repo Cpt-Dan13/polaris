@@ -215,6 +215,23 @@ function BarView({ dist, mostIdx }: { dist: Dist; mostIdx: number }) {
 
 // ─── Chart: Line (frequency polygon) ─────────────────────────────────────────
 
+function lineSmoothCurve(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return '';
+  let d = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return d;
+}
+
 function LineView({ dist, mostIdx, uid }: { dist: Dist; mostIdx: number; uid: string }) {
   const W = 100, H = 60;
   const pad = { t: 8, r: 3, b: 0, l: 3 };
@@ -226,12 +243,8 @@ function LineView({ dist, mostIdx, uid }: { dist: Dist; mostIdx: number; uid: st
   const toY = (v: number) => pad.t + cH - (v / max) * cH;
   const pts = dist.map((d, i) => ({ x: toX(i), y: toY(d.pct) }));
 
-  const polyline = pts.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
-  const areaPoints = [
-    `${pts[0].x.toFixed(2)},${H}`,
-    ...pts.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`),
-    `${pts[pts.length - 1].x.toFixed(2)},${H}`,
-  ].join(' ');
+  const linePath = lineSmoothCurve(pts);
+  const areaPath = `${linePath} L ${pts[pts.length - 1].x.toFixed(2)} ${H} L ${pts[0].x.toFixed(2)} ${H} Z`;
   const gid = `line-${uid}`;
 
   return (
@@ -244,8 +257,8 @@ function LineView({ dist, mostIdx, uid }: { dist: Dist; mostIdx: number; uid: st
         >
           <defs>
             <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor={ACCENT} stopOpacity="0.3" />
-              <stop offset="100%" stopColor={ACCENT} stopOpacity="0.02" />
+              <stop offset="0%"   stopColor={ACCENT} stopOpacity="0.28" />
+              <stop offset="100%" stopColor={ACCENT} stopOpacity="0.01" />
             </linearGradient>
           </defs>
           {[0.25, 0.5, 0.75].map((t, i) => (
@@ -255,14 +268,13 @@ function LineView({ dist, mostIdx, uid }: { dist: Dist; mostIdx: number; uid: st
               stroke="var(--border)" strokeWidth="0.4" strokeDasharray="2,2"
             />
           ))}
-          <polygon points={areaPoints} fill={`url(#${gid})`} />
-          <polyline points={polyline} fill="none" stroke={ACCENT} strokeWidth="1.2"
-                    strokeLinecap="round" strokeLinejoin="round" />
+          <path d={areaPath} fill={`url(#${gid})`} />
+          <path d={linePath} fill="none" stroke={ACCENT} strokeWidth="1.4"
+                strokeLinecap="round" strokeLinejoin="round" />
           {pts.map((p, i) => (
             <circle key={i} cx={p.x} cy={p.y}
-              r={i === mostIdx ? 2.2 : 1}
-              fill={i === mostIdx ? ACCENT : 'var(--card)'}
-              stroke={ACCENT} strokeWidth="0.8"
+              r={i === mostIdx ? 4 : 2.2}
+              fill={i === mostIdx ? ACCENT : `${ACCENT}55`}
             />
           ))}
         </svg>
