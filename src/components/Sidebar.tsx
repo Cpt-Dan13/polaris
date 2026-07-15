@@ -1,31 +1,55 @@
-import { LayoutDashboard, Bot, Server, Activity, CircleUser as UserCircle, Clock, MessageSquare, Users, Headphones, Star, Flag, Megaphone, Sparkles, Settings, ChevronRight } from 'lucide-react';
+﻿import {
+  LayoutDashboard, Bot, Server, Activity, CircleUser as UserCircle, Clock,
+  MessageSquare, Users, Headphones, Star, Flag, Megaphone, Sparkles, Settings,
+  ChevronRight, BarChart2, PieChart, TrendingDown, Globe,
+  TrendingUp, Radio, CreditCard, DollarSign, ShieldAlert, ClipboardList, LifeBuoy,
+} from 'lucide-react';
 import type { Page } from '../types';
 
 interface NavItem {
   id: Page;
   label: string;
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
+  icon: React.ElementType;
   group?: string;
 }
 
 const navItems: NavItem[] = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard, group: 'Main' },
-  { id: 'bot-management', label: 'Bot Management', icon: Bot, group: 'Bots' },
-  { id: 'vm-health', label: 'VM Health Monitor', icon: Server, group: 'Bots' },
-  { id: 'activity-feed', label: 'Activity Feed', icon: Activity, group: 'Bots' },
-  { id: 'persona-manager', label: 'Persona Manager', icon: UserCircle, group: 'Bots' },
-  { id: 'scheduler', label: 'Scheduler', icon: Clock, group: 'Bots' },
-  { id: 'message-log', label: 'Message Log', icon: MessageSquare, group: 'Content' },
-  { id: 'user-management', label: 'User Management', icon: Users, group: 'Content' },
-  { id: 'customer-service', label: 'Customer Service', icon: Headphones, group: 'Content' },
-  { id: 'feedback', label: 'Feedback', icon: Star, group: 'Content' },
-  { id: 'reports-flags', label: 'Reports & Flags', icon: Flag, group: 'Content' },
-  { id: 'announcements', label: 'Announcements', icon: Megaphone, group: 'System' },
-  { id: 'iris', label: 'IRIS', icon: Sparkles, group: 'System' },
-  { id: 'settings', label: 'Settings', icon: Settings, group: 'System' },
+  { id: 'overview',            label: 'Overview',            icon: LayoutDashboard, group: 'Main' },
+
+  { id: 'swipe-analytics',     label: 'Swipe Analytics',     icon: BarChart2,       group: 'Analytics' },
+  { id: 'profile-analytics',   label: 'Profile Analytics',   icon: PieChart,        group: 'Analytics' },
+  { id: 'profile-insights',    label: 'Profile Insights',    icon: TrendingDown,    group: 'Analytics' },
+  { id: 'demographics',        label: 'Demographics',        icon: Globe,           group: 'Analytics' },
+  { id: 'growth',              label: 'Growth',              icon: TrendingUp,      group: 'Analytics' },
+  { id: 'active-users',        label: 'Active Users',        icon: Radio,           group: 'Analytics' },
+
+  { id: 'subscriptions',       label: 'Subscriptions',       icon: CreditCard,      group: 'Finance' },
+  { id: 'revenue',             label: 'Revenue',             icon: DollarSign,      group: 'Finance' },
+
+  { id: 'chat-assessment',     label: 'Chat Assessment',     icon: ShieldAlert,     group: 'Moderation' },
+  { id: 'report-evaluation',   label: 'Report Evaluation',   icon: ClipboardList,   group: 'Moderation' },
+  { id: 'reports-flags',       label: 'Reports & Flags',     icon: Flag,            group: 'Moderation' },
+
+  { id: 'customer-service',    label: 'Customer Service',    icon: Headphones,      group: 'Support' },
+  { id: 'support-tickets',     label: 'Support Tickets',     icon: LifeBuoy,        group: 'Support' },
+  { id: 'feedback',            label: 'Feedback',            icon: Star,            group: 'Support' },
+
+  { id: 'message-log',         label: 'Message Log',         icon: MessageSquare,   group: 'Content' },
+  { id: 'announcements',       label: 'Announcements',       icon: Megaphone,       group: 'Content' },
+
+  { id: 'user-management',     label: 'User Management',     icon: Users,           group: 'Users' },
+
+  { id: 'bot-management',      label: 'Bot Management',      icon: Bot,             group: 'Bots' },
+  { id: 'vm-health',           label: 'VM Health Monitor',   icon: Server,          group: 'Bots' },
+  { id: 'activity-feed',       label: 'Activity Feed',       icon: Activity,        group: 'Bots' },
+  { id: 'persona-manager',     label: 'Persona Manager',     icon: UserCircle,      group: 'Bots' },
+  { id: 'scheduler',           label: 'Scheduler',           icon: Clock,           group: 'Bots' },
+
+  { id: 'iris',                label: 'IRIS',                icon: Sparkles,        group: 'System' },
+  { id: 'settings',            label: 'Settings',            icon: Settings,        group: 'System' },
 ];
 
-const groups = ['Main', 'Bots', 'Content', 'System'];
+const groups = ['Main', 'Analytics', 'Finance', 'Moderation', 'Support', 'Content', 'Users', 'Bots', 'System'];
 
 interface SidebarProps {
   currentPage: Page;

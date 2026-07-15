@@ -1,4 +1,4 @@
-import type { Bot, VMStatus, ActivityLog, User, Ticket, FeedbackItem, ReportFlag, MessageLogEntry, ScheduleWindow, Persona } from '../types';
+﻿import type { Bot, VMStatus, ActivityLog, User, Ticket, FeedbackItem, ReportFlag, MessageLogEntry, ScheduleWindow, Persona } from '../types';
 
 export const bots: Bot[] = [
   {
@@ -213,6 +213,16 @@ export const overviewStats = {
   messageGrowth: 12.1,
   revenueGrowth: 6.7,
   botGrowth: 0,
+  novaSubscribers: 892,
+  novaGrowth: 14.2,
+  supernovaSubscribers: 341,
+  supernovaGrowth: 22.8,
+  newRegistrations: 127,
+  registrationGrowth: 18.5,
+  avgSwipesPerUser: 47,
+  swipeGrowth: 5.2,
+  flaggedMessages: 14,
+  openReports: 8,
 };
 
 export const lineChartData = [
@@ -226,7 +236,22 @@ export const lineChartData = [
 ];
 
 export const planDistribution = [
-  { label: 'Basic', value: 42, color: '#6b7280' },
-  { label: 'Premium', value: 35, color: '#e94560' },
-  { label: 'Gold', value: 23, color: '#c8972b' },
+  { label: 'Orbit (Free)', value: 951, color: '#6b7280' },
+  { label: 'Nova', value: 892, color: '#e94560' },
+  { label: 'SuperNova', value: 341, color: '#c8972b' },
+];
+
+export const revenueTrendData = [
+  { label: 'Jul', revenue: 14200 },
+  { label: 'Aug', revenue: 15800 },
+  { label: 'Sep', revenue: 16400 },
+  { label: 'Oct', revenue: 17900 },
+  { label: 'Nov', revenue: 19200 },
+  { label: 'Dec', revenue: 22100 },
+  { label: 'Jan', revenue: 20800 },
+  { label: 'Feb', revenue: 21500 },
+  { label: 'Mar', revenue: 23200 },
+  { label: 'Apr', revenue: 22800 },
+  { label: 'May', revenue: 23900 },
+  { label: 'Jun', revenue: 24680 },
 ];

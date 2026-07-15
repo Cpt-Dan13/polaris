@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Headphones, ChevronDown, ChevronUp } from 'lucide-react';
 import { tickets } from '../data/sampleData';
 import type { Ticket } from '../types';

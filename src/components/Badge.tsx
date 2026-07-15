@@ -1,4 +1,4 @@
-interface BadgeProps {
+﻿interface BadgeProps {
   label: string;
   variant?: 'success' | 'error' | 'warning' | 'info' | 'neutral' | 'gold';
   size?: 'sm' | 'md';

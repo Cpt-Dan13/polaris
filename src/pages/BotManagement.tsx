@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+﻿import { useState, useRef } from 'react';
 import { MessageSquare, Server, TrendingUp, MoreHorizontal } from 'lucide-react';
 import type { Bot } from '../types';
 import { bots as initialBots } from '../data/sampleData';

@@ -1,16 +1,35 @@
 export type Page =
   | 'overview'
+  // Analytics
+  | 'swipe-analytics'
+  | 'profile-analytics'
+  | 'profile-insights'
+  | 'demographics'
+  | 'growth'
+  | 'active-users'
+  // Finance
+  | 'subscriptions'
+  | 'revenue'
+  // Moderation
+  | 'chat-assessment'
+  | 'report-evaluation'
+  | 'reports-flags'
+  // Support
+  | 'customer-service'
+  | 'support-tickets'
+  | 'feedback'
+  // Content
+  | 'message-log'
+  | 'announcements'
+  // Users
+  | 'user-management'
+  // Bots
   | 'bot-management'
   | 'vm-health'
   | 'activity-feed'
   | 'persona-manager'
   | 'scheduler'
-  | 'message-log'
-  | 'user-management'
-  | 'customer-service'
-  | 'feedback'
-  | 'reports-flags'
-  | 'announcements'
+  // System
   | 'iris'
   | 'settings';
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Activity, Filter } from 'lucide-react';
 import { activityLogs as initialLogs } from '../data/sampleData';
 import type { ActivityLog } from '../types';

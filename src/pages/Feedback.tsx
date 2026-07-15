@@ -1,4 +1,4 @@
-import { Star } from 'lucide-react';
+﻿import { Star } from 'lucide-react';
 import { feedbackItems } from '../data/sampleData';
 import Badge from '../components/Badge';
 

@@ -17,24 +17,45 @@ import ReportsFlags from './pages/ReportsFlags';
 import Announcements from './pages/Announcements';
 import IRIS from './pages/IRIS';
 import Settings from './pages/Settings';
+import ProfileAnalytics from './pages/ProfileAnalytics';
+import ComingSoon from './pages/ComingSoon';
 
 function PageRenderer({ page }: { page: Page }) {
   switch (page) {
-    case 'overview': return <Overview />;
-    case 'bot-management': return <BotManagement />;
-    case 'vm-health': return <VMHealthMonitor />;
-    case 'activity-feed': return <BotActivityFeed />;
-    case 'persona-manager': return <PersonaManager />;
-    case 'scheduler': return <Scheduler />;
-    case 'message-log': return <MessageLog />;
-    case 'user-management': return <UserManagement />;
-    case 'customer-service': return <CustomerService />;
-    case 'feedback': return <Feedback />;
-    case 'reports-flags': return <ReportsFlags />;
-    case 'announcements': return <Announcements />;
-    case 'iris': return <IRIS />;
-    case 'settings': return <Settings />;
-    default: return <Overview />;
+    case 'overview':            return <Overview />;
+    // Analytics
+    case 'swipe-analytics':     return <ComingSoon title="Swipe Analytics" />;
+    case 'profile-analytics':   return <ProfileAnalytics />;
+    case 'profile-insights':    return <ComingSoon title="Profile Insights" />;
+    case 'demographics':        return <ComingSoon title="Demographics" />;
+    case 'growth':              return <ComingSoon title="Growth" />;
+    case 'active-users':        return <ComingSoon title="Active Users" />;
+    // Finance
+    case 'subscriptions':       return <ComingSoon title="Subscriptions" />;
+    case 'revenue':             return <ComingSoon title="Revenue" />;
+    // Moderation
+    case 'chat-assessment':     return <ComingSoon title="Chat Assessment" />;
+    case 'report-evaluation':   return <ComingSoon title="Report Evaluation" />;
+    case 'reports-flags':       return <ReportsFlags />;
+    // Support
+    case 'customer-service':    return <CustomerService />;
+    case 'support-tickets':     return <ComingSoon title="Support Tickets" />;
+    case 'feedback':            return <Feedback />;
+    // Content
+    case 'message-log':         return <MessageLog />;
+    case 'announcements':       return <Announcements />;
+    // Users
+    case 'user-management':     return <UserManagement />;
+    // Bots
+    case 'bot-management':      return <BotManagement />;
+    case 'vm-health':           return <VMHealthMonitor />;
+    case 'activity-feed':       return <BotActivityFeed />;
+    case 'persona-manager':     return <PersonaManager />;
+    case 'scheduler':           return <Scheduler />;
+    // System
+    case 'iris':                return <IRIS />;
+    case 'settings':            return <Settings />;
+    default:                    return <Overview />;
   }
 }
 

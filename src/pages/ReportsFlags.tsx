@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Flag, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { reportFlags } from '../data/sampleData';
 import type { ReportFlag } from '../types';

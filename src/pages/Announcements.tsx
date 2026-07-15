@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Megaphone, Send, Users, Globe } from 'lucide-react';
 
 const pastAnnouncements = [

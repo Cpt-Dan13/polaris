@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Search, AlertTriangle, MessageSquare, Image, Mic } from 'lucide-react';
 import { messageLogs } from '../data/sampleData';
 import Badge from '../components/Badge';

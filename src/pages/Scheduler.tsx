@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Clock, ToggleLeft as Toggle } from 'lucide-react';
 import { scheduleWindows as initialWindows } from '../data/sampleData';
 import type { ScheduleWindow } from '../types';

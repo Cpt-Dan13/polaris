@@ -1,19 +1,38 @@
-import { Sun, Moon, Bell, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
+﻿import { Sun, Moon, Bell, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 const pageTitles: Record<string, string> = {
   'overview': 'Overview',
+  // Analytics
+  'swipe-analytics': 'Swipe Analytics',
+  'profile-analytics': 'Profile Analytics',
+  'profile-insights': 'Profile Insights',
+  'demographics': 'Demographics',
+  'growth': 'Growth',
+  'active-users': 'Active Users',
+  // Finance
+  'subscriptions': 'Subscriptions',
+  'revenue': 'Revenue',
+  // Moderation
+  'chat-assessment': 'Chat Assessment',
+  'report-evaluation': 'Report Evaluation',
+  'reports-flags': 'Reports & Flags',
+  // Support
+  'customer-service': 'Customer Service',
+  'support-tickets': 'Support Tickets',
+  'feedback': 'Feedback',
+  // Content
+  'message-log': 'Message Log',
+  'announcements': 'Announcements',
+  // Users
+  'user-management': 'User Management',
+  // Bots
   'bot-management': 'Bot Management',
   'vm-health': 'VM Health Monitor',
   'activity-feed': 'Bot Activity Feed',
   'persona-manager': 'Persona Manager',
   'scheduler': 'Scheduler',
-  'message-log': 'Message Log',
-  'user-management': 'User Management',
-  'customer-service': 'Customer Service',
-  'feedback': 'Feedback',
-  'reports-flags': 'Reports & Flags',
-  'announcements': 'Announcements',
+  // System
   'iris': 'IRIS',
   'settings': 'Settings',
 };
