@@ -45,7 +45,7 @@ export default function Sidebar({ currentPage, onNavigate, collapsed }: SidebarP
         </div>
         {!collapsed && (
           <div className="overflow-hidden">
-            <div className="text-white font-semibold text-sm leading-tight truncate">Constellation</div>
+            <div className="text-white font-semibold text-sm leading-tight truncate">Polaris</div>
             <div className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Admin Dashboard</div>
           </div>
         )}
