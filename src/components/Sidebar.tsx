@@ -1,5 +1,5 @@
 ﻿import {
-  LayoutDashboard, Bot, Server, Activity, CircleUser as UserCircle, Clock,
+  LayoutDashboard, Bot, Activity, Clock,
   Users, Headphones, Star, Flag, Megaphone, Sparkles, Settings,
   ChevronRight, BarChart2, PieChart, TrendingDown,
   TrendingUp, Radio, CreditCard, DollarSign, ShieldAlert, ClipboardList, LifeBuoy,
@@ -37,17 +37,15 @@ const navItems: NavItem[] = [
 
   { id: 'user-management',     label: 'User Management',     icon: Users,           group: 'Users' },
 
-  { id: 'bot-management',      label: 'Bot Management',      icon: Bot,             group: 'Bots' },
-  { id: 'vm-health',           label: 'VM Health Monitor',   icon: Server,          group: 'Bots' },
-  { id: 'activity-feed',       label: 'Activity Feed',       icon: Activity,        group: 'Bots' },
-  { id: 'persona-manager',     label: 'Persona Manager',     icon: UserCircle,      group: 'Bots' },
-  { id: 'scheduler',           label: 'Scheduler',           icon: Clock,           group: 'Bots' },
+  { id: 'activity-feed',       label: 'Activity Feed',       icon: Activity,        group: 'Developer' },
+  { id: 'bot-management',      label: 'Bot Management',      icon: Bot,             group: 'Developer' },
+  { id: 'scheduler',           label: 'Scheduler',           icon: Clock,           group: 'Developer' },
 
   { id: 'iris',                label: 'IRIS',                icon: Sparkles,        group: 'System' },
   { id: 'settings',            label: 'Settings',            icon: Settings,        group: 'System' },
 ];
 
-const groups = ['Main', 'Analytics', 'Finance', 'Moderation', 'Support', 'Content', 'Users', 'Bots', 'System'];
+const groups = ['Main', 'Analytics', 'Finance', 'Moderation', 'Support', 'Content', 'Users', 'Developer', 'System'];
 
 interface SidebarProps {
   currentPage: Page;
