@@ -1,6 +1,6 @@
 # Polaris
 
-**Polaris** is the internal admin dashboard for the [Constellation](../constellation/) dating app. Named after the North Star — the fixed point everything orbits around — Polaris gives the ops team a single command center to monitor, manage, and grow the platform.
+**Polaris** is the internal admin dashboard for the [Constellation](https://github.com/Cpt-Dan13/constellation) dating app. Named after the North Star — the fixed point everything orbits around — Polaris gives the ops team a single command center to monitor, manage, and grow the platform.
 
 Built with React 18 + TypeScript + Vite + Tailwind CSS. All navigation is pure React state (no router); charts are hand-rolled SVG. Data is currently mocked and will be wired to Supabase as each module ships.
 
