@@ -15,6 +15,7 @@ import Feedback from './pages/Feedback';
 import ReportsFlags from './pages/ReportsFlags';
 import Announcements from './pages/Announcements';
 import Settings from './pages/Settings';
+import SwipeAnalytics from './pages/SwipeAnalytics';
 import ProfileAnalytics from './pages/ProfileAnalytics';
 import ProfileInsights from './pages/ProfileInsights';
 import Growth from './pages/Growth';
@@ -30,7 +31,7 @@ function PageRenderer({ page }: { page: Page }) {
   switch (page) {
     case 'overview':            return <Overview />;
     // Analytics
-    case 'swipe-analytics':     return <ComingSoon title="Swipe Analytics" />;
+    case 'swipe-analytics':     return <SwipeAnalytics />;
     case 'profile-analytics':   return <ProfileAnalytics />;
     case 'profile-insights':    return <ProfileInsights />;
     case 'growth':              return <Growth />;
