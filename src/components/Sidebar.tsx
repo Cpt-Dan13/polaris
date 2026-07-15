@@ -1,6 +1,6 @@
 ﻿import {
   LayoutDashboard, Bot, Server, Activity, CircleUser as UserCircle, Clock,
-  MessageSquare, Users, Headphones, Star, Flag, Megaphone, Sparkles, Settings,
+  Users, Headphones, Star, Flag, Megaphone, Sparkles, Settings,
   ChevronRight, BarChart2, PieChart, TrendingDown,
   TrendingUp, Radio, CreditCard, DollarSign, ShieldAlert, ClipboardList, LifeBuoy,
 } from 'lucide-react';
@@ -33,7 +33,6 @@ const navItems: NavItem[] = [
   { id: 'support-tickets',     label: 'Support Tickets',     icon: LifeBuoy,        group: 'Support' },
   { id: 'feedback',            label: 'Feedback',            icon: Star,            group: 'Support' },
 
-  { id: 'message-log',         label: 'Message Log',         icon: MessageSquare,   group: 'Content' },
   { id: 'announcements',       label: 'Announcements',       icon: Megaphone,       group: 'Content' },
 
   { id: 'user-management',     label: 'User Management',     icon: Users,           group: 'Users' },

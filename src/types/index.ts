@@ -18,7 +18,6 @@ export type Page =
   | 'support-tickets'
   | 'feedback'
   // Content
-  | 'message-log'
   | 'announcements'
   // Users
   | 'user-management'
