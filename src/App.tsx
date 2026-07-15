@@ -18,6 +18,7 @@ import Announcements from './pages/Announcements';
 import IRIS from './pages/IRIS';
 import Settings from './pages/Settings';
 import ProfileAnalytics from './pages/ProfileAnalytics';
+import ProfileInsights from './pages/ProfileInsights';
 import ComingSoon from './pages/ComingSoon';
 
 function PageRenderer({ page }: { page: Page }) {
@@ -26,8 +27,7 @@ function PageRenderer({ page }: { page: Page }) {
     // Analytics
     case 'swipe-analytics':     return <ComingSoon title="Swipe Analytics" />;
     case 'profile-analytics':   return <ProfileAnalytics />;
-    case 'profile-insights':    return <ComingSoon title="Profile Insights" />;
-    case 'demographics':        return <ComingSoon title="Demographics" />;
+    case 'profile-insights':    return <ProfileInsights />;
     case 'growth':              return <ComingSoon title="Growth" />;
     case 'active-users':        return <ComingSoon title="Active Users" />;
     // Finance

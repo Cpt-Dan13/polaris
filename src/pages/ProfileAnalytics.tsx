@@ -9,6 +9,24 @@ import {
 const ACCENT = '#e94560';
 const GOLD = '#c8972b';
 const RANK_COLORS = ['#c8972b', '#a0a8bb', '#cd7f32'];
+const ROLE_COLORS: Record<string, string> = {
+  Patriarch:    ACCENT,
+  Muse:         GOLD,
+  Constellation: '#9c27b0',
+};
+const ROLE_GRADIENTS: Record<string, string> = {
+  Patriarch:    `linear-gradient(135deg, #1a1a2e, ${ACCENT})`,
+  Muse:         `linear-gradient(135deg, ${ACCENT}, ${GOLD})`,
+  Constellation: `linear-gradient(135deg, ${GOLD}, #9c27b0)`,
+};
+
+type Tab = 'patriarchs' | 'muses' | 'constellations';
+
+const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: 'patriarchs',     label: 'Patriarchs',    icon: <UserCheck size={14} /> },
+  { id: 'muses',          label: 'Muses',          icon: <Heart     size={14} /> },
+  { id: 'constellations', label: 'Constellations', icon: <Network   size={14} /> },
+];
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -43,6 +61,16 @@ const patriarchData = {
     { initials: 'MW', name: 'Marcus Webb',       location: 'Phoenix, AZ',  views: 12340 },
     { initials: 'NB', name: 'Nathan Blackwood',  location: 'Chicago, IL',  views: 10891 },
   ],
+  mostDisliked: [
+    { name: 'marcus_k',  passRate: 87, passes: 2341 },
+    { name: 'derek_b',   passRate: 79, passes: 1654 },
+    { name: 'anon_p_11', passRate: 71, passes: 1102 },
+  ],
+  mostReported: [
+    { name: 'rick_d',    reports: 28, blocks: 14, severity: 'high'   as const },
+    { name: 'anon_m_99', reports: 21, blocks: 9,  severity: 'high'   as const },
+    { name: 'devin_k',   reports: 12, blocks: 7,  severity: 'medium' as const },
+  ],
 };
 
 const museData = {
@@ -76,7 +104,27 @@ const museData = {
     { initials: 'SL', name: 'Sophia Laurent', location: 'New York, NY',    views: 19204 },
     { initials: 'LR', name: 'Luna Rodriguez', location: 'Miami, FL',       views: 17893 },
   ],
+  mostDisliked: [
+    { name: 'anon_user_7', passRate: 82, passes: 1987 },
+    { name: 'tiffany_w',   passRate: 74, passes: 1201 },
+    { name: 'jade_p',      passRate: 68, passes: 987  },
+  ],
+  mostReported: [
+    { name: 'vera_w',    reports: 19, blocks: 8,  severity: 'high'   as const },
+    { name: 'tiffany_w', reports: 11, blocks: 5,  severity: 'medium' as const },
+    { name: 'jade_p',    reports: 8,  blocks: 3,  severity: 'medium' as const },
+  ],
 };
+
+
+const ethnicityData = [
+  { label: 'Black / African',    pct: 42, color: '#e94560' },
+  { label: 'Hispanic / Latino',  pct: 23, color: '#c8972b' },
+  { label: 'White / Caucasian',  pct: 18, color: '#4caf50' },
+  { label: 'Asian',              pct: 9,  color: '#2196f3' },
+  { label: 'Mixed',              pct: 6,  color: '#9c27b0' },
+  { label: 'Other',              pct: 2,  color: '#607d8b' },
+];
 
 const constellationData = {
   topPerforming: [
@@ -90,10 +138,10 @@ const constellationData = {
     { initials: 'SF', name: 'The Sunrise Family',       members: 3, views: 21443 },
   ],
   mostDisliked: [
-    { name: 'marcus_k',    passRate: 87, passes: 2341, role: 'Patriarch' },
-    { name: 'anon_user_7', passRate: 82, passes: 1987, role: 'Muse'      },
-    { name: 'derek_b',     passRate: 79, passes: 1654, role: 'Patriarch' },
-    { name: 'tiffany_w',   passRate: 74, passes: 1201, role: 'Muse'      },
+    { name: 'midnight_crew', passRate: 74, passes: 1654 },
+    { name: 'the_outliers',  passRate: 66, passes: 1201 },
+    { name: 'nova_squad',    passRate: 59, passes: 987  },
+    { name: 'anon_group_9',  passRate: 52, passes: 743  },
   ],
   mostReported: [
     { name: 'rick_d',    reports: 28, blocks: 14, severity: 'high'   as const },
@@ -456,26 +504,35 @@ function ConstellationTab() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
 
+// ─── Per-type overview ────────────────────────────────────────────────────────
+
+function TypeOverview({
+  disliked,
+  reported,
+}: {
+  disliked:  { name: string; passRate: number; passes: number }[];
+  reported:  { name: string; reports: number; blocks: number; severity: 'high' | 'medium' | 'low' }[];
+}) {
+  return (
+    <div className="space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Most Disliked */}
         <div className="card p-5">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-3">
             <ThumbsDown size={15} style={{ color: '#ff9800' }} />
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Most Disliked Profiles</h3>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Most Disliked</h3>
             <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>by pass rate</span>
           </div>
-          <div className="space-y-3">
-            {d.mostDisliked.map(p => (
+          <div className="space-y-2.5">
+            {disliked.map(p => (
               <div key={p.name} className="p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>@{p.name}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-semibold px-1.5 py-0.5 rounded"
-                          style={{ background: '#ff9800', fontSize: 10 }}>
-                      {p.role}
-                    </span>
-                    <span className="text-xs font-bold" style={{ color: '#f44336' }}>{p.passRate}%</span>
-                  </div>
+                  <span className="text-xs font-bold" style={{ color: '#f44336' }}>{p.passRate}%</span>
                 </div>
                 <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
                   <div className="h-full rounded-full" style={{ width: `${p.passRate}%`, background: '#f44336' }} />
@@ -488,35 +545,57 @@ function ConstellationTab() {
           </div>
         </div>
 
+        {/* Most Reported */}
         <div className="card p-5">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-3">
             <AlertTriangle size={15} style={{ color: '#f44336' }} />
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Most Reported / Blocked</h3>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Most Reported</h3>
             <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>pending review</span>
           </div>
           <div className="space-y-2">
-            {d.mostReported.map(p => (
-              <div key={p.name} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                     style={{ background: 'rgba(244,67,54,0.12)' }}>
-                  <AlertTriangle size={13} style={{ color: '#f44336' }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>@{p.name}</div>
-                  <div className="text-xs" style={{ color: 'var(--text-light)' }}>
-                    {p.reports} reports · {p.blocks} blocks
+            {reported.map(p => {
+              const sevBg  = p.severity === 'high' ? 'rgba(244,67,54,0.1)' : p.severity === 'medium' ? 'rgba(255,152,0,0.1)' : 'rgba(76,175,80,0.1)';
+              const sevClr = p.severity === 'high' ? '#f44336'             : p.severity === 'medium' ? '#ff9800'             : '#4caf50';
+              return (
+                <div key={p.name} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                       style={{ background: 'rgba(244,67,54,0.12)' }}>
+                    <AlertTriangle size={13} style={{ color: '#f44336' }} />
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>@{p.name}</div>
+                    <div className="text-xs mt-0.5" style={{ color: 'var(--text-light)' }}>
+                      {p.reports} reports · {p.blocks} blocks
+                    </div>
+                  </div>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold capitalize flex-shrink-0"
+                        style={{ background: sevBg, color: sevClr }}>
+                    {p.severity}
+                  </span>
                 </div>
-                <span className="text-xs px-2 py-0.5 rounded-full font-semibold capitalize flex-shrink-0"
-                      style={{
-                        background: p.severity === 'high' ? 'rgba(244,67,54,0.1)' : 'rgba(255,152,0,0.1)',
-                        color:      p.severity === 'high' ? '#f44336' : '#ff9800',
-                      }}>
-                  {p.severity}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
+        </div>
+      </div>
+
+      {/* Ethnicity Distribution */}
+      <div className="card p-5">
+        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>Ethnicity Distribution</h3>
+        <div className="flex h-6 rounded-lg overflow-hidden gap-px mb-4">
+          {ethnicityData.map(e => (
+            <div key={e.label} style={{ width: `${e.pct}%`, background: e.color }}
+                 title={`${e.label}: ${e.pct}%`} />
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
+          {ethnicityData.map(e => (
+            <div key={e.label} className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: e.color }} />
+              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{e.label}</span>
+              <span className="text-xs font-bold" style={{ color: 'var(--text)' }}>{e.pct}%</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -525,19 +604,12 @@ function ConstellationTab() {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-type Tab = 'patriarchs' | 'muses' | 'constellations';
-
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'patriarchs',     label: 'Patriarchs',    icon: <UserCheck size={14} /> },
-  { id: 'muses',          label: 'Muses',          icon: <Heart     size={14} /> },
-  { id: 'constellations', label: 'Constellations', icon: <Network   size={14} /> },
-];
-
 export default function ProfileAnalytics() {
   const [tab, setTab] = useState<Tab>('patriarchs');
 
   return (
     <div className="space-y-5">
+      {/* Pill nav */}
       <div className="flex gap-2 flex-wrap">
         {TABS.map(t => {
           const active = tab === t.id;
@@ -560,20 +632,23 @@ export default function ProfileAnalytics() {
       </div>
 
       {tab === 'patriarchs' && (
-        <ProfileTab
-          data={patriarchData}
-          gradient={`linear-gradient(135deg, #1a1a2e, ${ACCENT})`}
-          tabKey="patriarch"
-        />
+        <>
+          <ProfileTab data={patriarchData} gradient={`linear-gradient(135deg, #1a1a2e, ${ACCENT})`} tabKey="patriarch" />
+          <TypeOverview disliked={patriarchData.mostDisliked} reported={patriarchData.mostReported} />
+        </>
       )}
       {tab === 'muses' && (
-        <ProfileTab
-          data={museData}
-          gradient={`linear-gradient(135deg, ${ACCENT}, ${GOLD})`}
-          tabKey="muse"
-        />
+        <>
+          <ProfileTab data={museData} gradient={`linear-gradient(135deg, ${ACCENT}, ${GOLD})`} tabKey="muse" />
+          <TypeOverview disliked={museData.mostDisliked} reported={museData.mostReported} />
+        </>
       )}
-      {tab === 'constellations' && <ConstellationTab />}
+      {tab === 'constellations' && (
+        <>
+          <ConstellationTab />
+          <TypeOverview disliked={constellationData.mostDisliked} reported={constellationData.mostReported} />
+        </>
+      )}
     </div>
   );
 }

@@ -7,7 +7,6 @@ const pageTitles: Record<string, string> = {
   'swipe-analytics': 'Swipe Analytics',
   'profile-analytics': 'Profile Analytics',
   'profile-insights': 'Profile Insights',
-  'demographics': 'Demographics',
   'growth': 'Growth',
   'active-users': 'Active Users',
   // Finance

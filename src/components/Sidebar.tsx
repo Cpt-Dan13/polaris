@@ -1,7 +1,7 @@
 ﻿import {
   LayoutDashboard, Bot, Server, Activity, CircleUser as UserCircle, Clock,
   MessageSquare, Users, Headphones, Star, Flag, Megaphone, Sparkles, Settings,
-  ChevronRight, BarChart2, PieChart, TrendingDown, Globe,
+  ChevronRight, BarChart2, PieChart, TrendingDown,
   TrendingUp, Radio, CreditCard, DollarSign, ShieldAlert, ClipboardList, LifeBuoy,
 } from 'lucide-react';
 import type { Page } from '../types';
@@ -19,7 +19,6 @@ const navItems: NavItem[] = [
   { id: 'swipe-analytics',     label: 'Swipe Analytics',     icon: BarChart2,       group: 'Analytics' },
   { id: 'profile-analytics',   label: 'Profile Analytics',   icon: PieChart,        group: 'Analytics' },
   { id: 'profile-insights',    label: 'Profile Insights',    icon: TrendingDown,    group: 'Analytics' },
-  { id: 'demographics',        label: 'Demographics',        icon: Globe,           group: 'Analytics' },
   { id: 'growth',              label: 'Growth',              icon: TrendingUp,      group: 'Analytics' },
   { id: 'active-users',        label: 'Active Users',        icon: Radio,           group: 'Analytics' },
 

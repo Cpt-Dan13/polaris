@@ -4,7 +4,6 @@ export type Page =
   | 'swipe-analytics'
   | 'profile-analytics'
   | 'profile-insights'
-  | 'demographics'
   | 'growth'
   | 'active-users'
   // Finance
