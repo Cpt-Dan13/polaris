@@ -102,6 +102,11 @@ export interface SwipeAnalyticsData {
   }
   hourly:    number[]
   top_liked: { user_id: string; first_name: string; last_name: string | null; likes: number }[]
+  by_type: {
+    patriarch:     { swipes: number; like_rate: number; match_rate: number; avg_daily: number }
+    muse:          { swipes: number; like_rate: number; match_rate: number; avg_daily: number }
+    constellation: { swipes: number; like_rate: number; match_rate: number; avg_daily: number }
+  }
 }
 
 export interface AdminUser {

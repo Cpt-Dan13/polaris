@@ -12,12 +12,6 @@ const PASS_C  = '#6b7280';
 type Period = 'week' | 'month' | 'year';
 const PERIOD_LABELS: Record<Period, string> = { week: 'Week', month: 'Month', year: 'Year' };
 
-// ─── Static "by type" data (requires DB-level JOINs, kept representative) ───
-const userTypeStats = [
-  { type: 'Patriarchs',     swipes: 0, likeRate: '—', matchRate: '—', avgDaily: 0, color: ACCENT  },
-  { type: 'Muses',          swipes: 0, likeRate: '—', matchRate: '—', avgDaily: 0, color: GOLD    },
-  { type: 'Constellations', swipes: 0, likeRate: '—', matchRate: '—', avgDaily: 0, color: PURPLE  },
-];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -445,39 +439,56 @@ export default function SwipeAnalytics() {
       {/* Swipe Behaviour by Type + Top Liked */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        {/* By Type — representative data, per-gender JOIN analytics coming soon */}
+        {/* By Type */}
         <div className="card p-5">
           <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>Swipe Behaviour by Type</h3>
-          <div className="flex h-2 rounded-full overflow-hidden gap-px mb-5">
-            {userTypeStats.map(u => (
-              <div key={u.type} style={{ flex: 1, background: u.color }} title={u.type} />
-            ))}
-          </div>
-          <div className="space-y-4">
-            {userTypeStats.map(u => (
-              <div key={u.type} className="p-4 rounded-xl" style={{ background: 'var(--bg)' }}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: u.color }} />
-                    <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{u.type}</span>
-                  </div>
-                  <span className="text-xs" style={{ color: 'var(--text-light)' }}>analytics pending</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  {[
-                    { label: 'Like Rate',  value: u.likeRate  },
-                    { label: 'Match Rate', value: u.matchRate },
-                    { label: 'Avg/Day',    value: u.avgDaily === 0 ? '—' : u.avgDaily },
-                  ].map(s => (
-                    <div key={s.label} className="p-2 rounded-lg" style={{ background: 'var(--card)' }}>
-                      <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)', fontSize: 9 }}>{s.label}</div>
-                      <div className="text-sm font-bold" style={{ color: 'var(--text)' }}>{s.value}</div>
+          {loading
+            ? <div className="flex items-center justify-center h-40"><Loader size={18} className="animate-spin" style={{ color: ACCENT }} /></div>
+            : (() => {
+                const types = data ? [
+                  { type: 'Patriarchs',     color: ACCENT,  stats: data.by_type.patriarch     },
+                  { type: 'Muses',          color: GOLD,    stats: data.by_type.muse          },
+                  { type: 'Constellations', color: PURPLE,  stats: data.by_type.constellation },
+                ] : [];
+                const totalSwipes = types.reduce((s, t) => s + t.stats.swipes, 0) || 1;
+                return (
+                  <>
+                    <div className="flex h-2 rounded-full overflow-hidden gap-px mb-5">
+                      {types.map(u => (
+                        <div key={u.type}
+                             style={{ width: `${(u.stats.swipes / totalSwipes * 100).toFixed(1)}%`, background: u.color, minWidth: u.stats.swipes > 0 ? 4 : 0 }}
+                             title={u.type} />
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+                    <div className="space-y-4">
+                      {types.map(u => (
+                        <div key={u.type} className="p-4 rounded-xl" style={{ background: 'var(--bg)' }}>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2.5 h-2.5 rounded-full" style={{ background: u.color }} />
+                              <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{u.type}</span>
+                            </div>
+                            <span className="text-sm font-black" style={{ color: u.color }}>{fmtK(u.stats.swipes)}</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            {[
+                              { label: 'Like Rate',  value: `${u.stats.like_rate}%`  },
+                              { label: 'Match Rate', value: `${u.stats.match_rate}%` },
+                              { label: 'Avg/Day',    value: u.stats.avg_daily || '—' },
+                            ].map(s => (
+                              <div key={s.label} className="p-2 rounded-lg" style={{ background: 'var(--card)' }}>
+                                <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)', fontSize: 9 }}>{s.label}</div>
+                                <div className="text-sm font-bold" style={{ color: 'var(--text)' }}>{s.value}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()
+          }
         </div>
 
         {/* Top Liked Profiles */}
