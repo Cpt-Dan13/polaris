@@ -35,6 +35,8 @@ export const api = {
     activeUsers:       () => request('/analytics/active-users'),
     genderSplit:       () => request('/analytics/gender-split'),
     subscriptionSplit: () => request('/analytics/subscription-split'),
+    swipes:            (period: 'week' | 'month' | 'year' = 'week') =>
+      request<SwipeAnalyticsData>(`/analytics/swipes?period=${period}`),
   },
 
   moderation: {
@@ -72,6 +74,34 @@ export const api = {
     patch:     (id: string, body: Record<string, unknown>) =>
       request(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   },
+}
+
+export interface SwipeAnalyticsData {
+  kpis: {
+    total_swipes_today: number
+    like_rate:          number
+    match_rate:         number
+    super_likes_today:  number
+  }
+  decisions: {
+    like_pct:       number
+    pass_pct:       number
+    super_like_pct: number
+  }
+  volume: {
+    labels:  string[]
+    likes:   number[]
+    passes:  number[]
+  }
+  funnel: {
+    total_swipes:  number
+    likes:         number
+    matches:       number
+    conversations: number
+    active_chats:  number
+  }
+  hourly:    number[]
+  top_liked: { user_id: string; first_name: string; last_name: string | null; likes: number }[]
 }
 
 export interface AdminUser {
