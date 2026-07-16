@@ -4,7 +4,7 @@ import {
   SlidersHorizontal, Loader,
 } from 'lucide-react';
 import { api } from '../lib/api';
-import type { ProfileAnalyticsData, DistBucket } from '../lib/api';
+import type { ProfileAnalyticsData, DistBucket, TopPerformingEntry, MostPopularEntry } from '../lib/api';
 
 function cmToFt(cm: number | null): string {
   if (!cm) return '—';
@@ -400,7 +400,7 @@ function RankCard({ rank, initials, name, sub, primary, primaryLabel, gradient }
 
 // ─── Patriarch / Muse tab ─────────────────────────────────────────────────────
 
-function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge, modeAge, heightDistData, ageDistData }: {
+function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge, modeAge, heightDistData, ageDistData, topPerforming, mostPopular }: {
   data: typeof patriarchData;
   gradient: string;
   tabKey: string;
@@ -410,6 +410,8 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
   modeAge:        number | null;
   heightDistData: { dist: DistBucket[]; mostIdx: number } | null;
   ageDistData:    { dist: DistBucket[]; mostIdx: number } | null;
+  topPerforming:  TopPerformingEntry[] | null;
+  mostPopular:    MostPopularEntry[]   | null;
 }) {
   const [graphType, setGraphType] = useState<GraphType>('bar');
 
@@ -463,16 +465,22 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Top Performing</h3>
             <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>by stars &amp; likes</span>
           </div>
-          <div className="space-y-2">
-            {data.topPerforming.map((p, i) => (
-              <RankCard
-                key={p.name} rank={i}
-                initials={p.initials} name={p.name} sub={p.location}
-                primary={p.stars} primaryLabel="stars"
-                gradient={gradient}
-              />
-            ))}
-          </div>
+          {topPerforming === null
+            ? <div className="flex justify-center py-6"><Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} /></div>
+            : topPerforming.length === 0
+              ? <p className="text-xs text-center py-4" style={{ color: 'var(--text-light)' }}>No data yet</p>
+              : <div className="space-y-2">
+                  {topPerforming.map((p, i) => (
+                    <RankCard
+                      key={p.id} rank={i}
+                      initials={p.initials} name={p.name}
+                      sub={`${p.likes.toLocaleString()} likes`}
+                      primary={p.stars} primaryLabel="stars"
+                      gradient={gradient}
+                    />
+                  ))}
+                </div>
+          }
         </div>
         <div className="card p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -480,16 +488,22 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Most Popular</h3>
             <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>by profile views</span>
           </div>
-          <div className="space-y-2">
-            {data.mostPopular.map((p, i) => (
-              <RankCard
-                key={p.name} rank={i}
-                initials={p.initials} name={p.name} sub={p.location}
-                primary={p.views} primaryLabel="views"
-                gradient={gradient}
-              />
-            ))}
-          </div>
+          {mostPopular === null
+            ? <div className="flex justify-center py-6"><Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} /></div>
+            : mostPopular.length === 0
+              ? <p className="text-xs text-center py-4" style={{ color: 'var(--text-light)' }}>No data yet</p>
+              : <div className="space-y-2">
+                  {mostPopular.map((p, i) => (
+                    <RankCard
+                      key={p.id} rank={i}
+                      initials={p.initials} name={p.name}
+                      sub="unique profile visits"
+                      primary={p.views} primaryLabel="views"
+                      gradient={gradient}
+                    />
+                  ))}
+                </div>
+          }
         </div>
       </div>
     </div>
@@ -668,12 +682,14 @@ export default function ProfileAnalytics() {
         <>
           <ProfileTab
             data={patriarchData} gradient={`linear-gradient(135deg, #1a1a2e, ${ACCENT})`} tabKey="patriarch"
-            avgHeightCm={profileStats?.patriarch.avg_cm   ?? null}
-            modeHeightCm={profileStats?.patriarch.mode_cm ?? null}
-            avgAge={profileStats?.patriarch.avg_age       ?? null}
-            modeAge={profileStats?.patriarch.mode_age     ?? null}
+            avgHeightCm={profileStats?.patriarch.avg_cm        ?? null}
+            modeHeightCm={profileStats?.patriarch.mode_cm      ?? null}
+            avgAge={profileStats?.patriarch.avg_age            ?? null}
+            modeAge={profileStats?.patriarch.mode_age          ?? null}
             heightDistData={profileStats?.patriarch.height_dist ?? null}
-            ageDistData={profileStats?.patriarch.age_dist    ?? null}
+            ageDistData={profileStats?.patriarch.age_dist       ?? null}
+            topPerforming={profileStats?.patriarch.top_performing ?? null}
+            mostPopular={profileStats?.patriarch.most_popular     ?? null}
           />
           <TypeOverview disliked={patriarchData.mostDisliked} reported={patriarchData.mostReported} />
         </>
@@ -682,12 +698,14 @@ export default function ProfileAnalytics() {
         <>
           <ProfileTab
             data={museData} gradient={`linear-gradient(135deg, ${ACCENT}, ${GOLD})`} tabKey="muse"
-            avgHeightCm={profileStats?.muse.avg_cm   ?? null}
-            modeHeightCm={profileStats?.muse.mode_cm ?? null}
-            avgAge={profileStats?.muse.avg_age       ?? null}
-            modeAge={profileStats?.muse.mode_age     ?? null}
+            avgHeightCm={profileStats?.muse.avg_cm        ?? null}
+            modeHeightCm={profileStats?.muse.mode_cm      ?? null}
+            avgAge={profileStats?.muse.avg_age            ?? null}
+            modeAge={profileStats?.muse.mode_age          ?? null}
             heightDistData={profileStats?.muse.height_dist ?? null}
-            ageDistData={profileStats?.muse.age_dist    ?? null}
+            ageDistData={profileStats?.muse.age_dist       ?? null}
+            topPerforming={profileStats?.muse.top_performing ?? null}
+            mostPopular={profileStats?.muse.most_popular     ?? null}
           />
           <TypeOverview disliked={museData.mostDisliked} reported={museData.mostReported} />
         </>

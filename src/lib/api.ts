@@ -79,18 +79,25 @@ export const api = {
 
 export interface DistBucket { label: string; pct: number }
 
+export interface TopPerformingEntry { id: string; name: string; initials: string; stars: number; likes: number }
+export interface MostPopularEntry   { id: string; name: string; initials: string; views: number }
+
 export interface ProfileAnalyticsData {
   patriarch: {
     avg_cm: number | null; mode_cm: number | null
     avg_age: number | null; mode_age: number | null
-    height_dist: { dist: DistBucket[]; mostIdx: number }
-    age_dist:    { dist: DistBucket[]; mostIdx: number }
+    height_dist:    { dist: DistBucket[]; mostIdx: number }
+    age_dist:       { dist: DistBucket[]; mostIdx: number }
+    top_performing: TopPerformingEntry[]
+    most_popular:   MostPopularEntry[]
   }
   muse: {
     avg_cm: number | null; mode_cm: number | null
     avg_age: number | null; mode_age: number | null
-    height_dist: { dist: DistBucket[]; mostIdx: number }
-    age_dist:    { dist: DistBucket[]; mostIdx: number }
+    height_dist:    { dist: DistBucket[]; mostIdx: number }
+    age_dist:       { dist: DistBucket[]; mostIdx: number }
+    top_performing: TopPerformingEntry[]
+    most_popular:   MostPopularEntry[]
   }
 }
 
