@@ -400,12 +400,14 @@ function RankCard({ rank, initials, name, sub, primary, primaryLabel, gradient }
 
 // ─── Patriarch / Muse tab ─────────────────────────────────────────────────────
 
-function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm }: {
+function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge, modeAge }: {
   data: typeof patriarchData;
   gradient: string;
   tabKey: string;
   avgHeightCm:  number | null;
   modeHeightCm: number | null;
+  avgAge:       number | null;
+  modeAge:      number | null;
 }) {
   const [graphType, setGraphType] = useState<GraphType>('bar');
 
@@ -413,10 +415,10 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm }: {
     <div className="space-y-4">
       {/* Stat pills */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatPill label="Avg Desired Height"  value={cmToFt(avgHeightCm)}  sub="weighted by likes received" />
-        <StatPill label="Most Desired Height" value={cmToFt(modeHeightCm)} sub="height with most likes" />
-        <StatPill label="Avg Desired Age"     value={data.avgAge}           sub="years old average" />
-        <StatPill label="Most Desired Age"    value={data.mostAge}          sub="highest frequency" />
+        <StatPill label="Avg Desired Height"  value={cmToFt(avgHeightCm)}       sub="weighted by likes received" />
+        <StatPill label="Most Desired Height" value={cmToFt(modeHeightCm)}      sub="height with most likes" />
+        <StatPill label="Avg Desired Age"     value={avgAge  ?? '—'}            sub="weighted by likes received" />
+        <StatPill label="Most Desired Age"    value={modeAge != null ? `${modeAge} yrs` : '—'} sub="age with most likes" />
       </div>
 
       {/* Distribution charts + toggle */}
@@ -664,8 +666,10 @@ export default function ProfileAnalytics() {
         <>
           <ProfileTab
             data={patriarchData} gradient={`linear-gradient(135deg, #1a1a2e, ${ACCENT})`} tabKey="patriarch"
-            avgHeightCm={profileStats?.patriarch.avg_cm ?? null}
+            avgHeightCm={profileStats?.patriarch.avg_cm   ?? null}
             modeHeightCm={profileStats?.patriarch.mode_cm ?? null}
+            avgAge={profileStats?.patriarch.avg_age       ?? null}
+            modeAge={profileStats?.patriarch.mode_age     ?? null}
           />
           <TypeOverview disliked={patriarchData.mostDisliked} reported={patriarchData.mostReported} />
         </>
@@ -674,8 +678,10 @@ export default function ProfileAnalytics() {
         <>
           <ProfileTab
             data={museData} gradient={`linear-gradient(135deg, ${ACCENT}, ${GOLD})`} tabKey="muse"
-            avgHeightCm={profileStats?.muse.avg_cm ?? null}
+            avgHeightCm={profileStats?.muse.avg_cm   ?? null}
             modeHeightCm={profileStats?.muse.mode_cm ?? null}
+            avgAge={profileStats?.muse.avg_age       ?? null}
+            modeAge={profileStats?.muse.mode_age     ?? null}
           />
           <TypeOverview disliked={museData.mostDisliked} reported={museData.mostReported} />
         </>
