@@ -37,6 +37,7 @@ export const api = {
     subscriptionSplit: () => request('/analytics/subscription-split'),
     swipes:            (period: 'week' | 'month' | 'year' = 'week') =>
       request<SwipeAnalyticsData>(`/analytics/swipes?period=${period}`),
+    profiles:          () => request<ProfileAnalyticsData>('/analytics/profiles'),
   },
 
   moderation: {
@@ -74,6 +75,11 @@ export const api = {
     patch:     (id: string, body: Record<string, unknown>) =>
       request(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   },
+}
+
+export interface ProfileAnalyticsData {
+  patriarch: { avg_cm: number | null; mode_cm: number | null; avg_age: number | null; mode_age: number | null }
+  muse:      { avg_cm: number | null; mode_cm: number | null; avg_age: number | null; mode_age: number | null }
 }
 
 export interface SwipeAnalyticsData {

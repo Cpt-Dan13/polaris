@@ -1,8 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   UserCheck, Heart, Network, Award, Eye, ThumbsDown, AlertTriangle,
   SlidersHorizontal,
 } from 'lucide-react';
+import { api } from '../lib/api';
+import type { ProfileAnalyticsData } from '../lib/api';
+
+function cmToFt(cm: number | null): string {
+  if (!cm) return '—';
+  const totalInches = cm / 2.54;
+  const feet   = Math.floor(totalInches / 12);
+  const inches = Math.round(totalInches % 12);
+  return `${feet}'${inches}"`;
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -390,10 +400,12 @@ function RankCard({ rank, initials, name, sub, primary, primaryLabel, gradient }
 
 // ─── Patriarch / Muse tab ─────────────────────────────────────────────────────
 
-function ProfileTab({ data, gradient, tabKey }: {
+function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm }: {
   data: typeof patriarchData;
   gradient: string;
   tabKey: string;
+  avgHeightCm:  number | null;
+  modeHeightCm: number | null;
 }) {
   const [graphType, setGraphType] = useState<GraphType>('bar');
 
@@ -401,10 +413,10 @@ function ProfileTab({ data, gradient, tabKey }: {
     <div className="space-y-4">
       {/* Stat pills */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatPill label="Avg Desired Height" value={data.avgHeight} sub="filter preference avg" />
-        <StatPill label="Most Desired Height" value={data.mostHeight} sub="highest frequency" />
-        <StatPill label="Avg Desired Age"    value={data.avgAge}    sub="years old average" />
-        <StatPill label="Most Desired Age"   value={data.mostAge}   sub="highest frequency" />
+        <StatPill label="Avg Desired Height"  value={cmToFt(avgHeightCm)}  sub="weighted by likes received" />
+        <StatPill label="Most Desired Height" value={cmToFt(modeHeightCm)} sub="height with most likes" />
+        <StatPill label="Avg Desired Age"     value={data.avgAge}           sub="years old average" />
+        <StatPill label="Most Desired Age"    value={data.mostAge}          sub="highest frequency" />
       </div>
 
       {/* Distribution charts + toggle */}
@@ -618,6 +630,11 @@ function TypeOverview({
 
 export default function ProfileAnalytics() {
   const [tab, setTab] = useState<Tab>('patriarchs');
+  const [profileStats, setProfileStats] = useState<ProfileAnalyticsData | null>(null);
+
+  useEffect(() => {
+    api.analytics.profiles().then(setProfileStats).catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -645,13 +662,21 @@ export default function ProfileAnalytics() {
 
       {tab === 'patriarchs' && (
         <>
-          <ProfileTab data={patriarchData} gradient={`linear-gradient(135deg, #1a1a2e, ${ACCENT})`} tabKey="patriarch" />
+          <ProfileTab
+            data={patriarchData} gradient={`linear-gradient(135deg, #1a1a2e, ${ACCENT})`} tabKey="patriarch"
+            avgHeightCm={profileStats?.patriarch.avg_cm ?? null}
+            modeHeightCm={profileStats?.patriarch.mode_cm ?? null}
+          />
           <TypeOverview disliked={patriarchData.mostDisliked} reported={patriarchData.mostReported} />
         </>
       )}
       {tab === 'muses' && (
         <>
-          <ProfileTab data={museData} gradient={`linear-gradient(135deg, ${ACCENT}, ${GOLD})`} tabKey="muse" />
+          <ProfileTab
+            data={museData} gradient={`linear-gradient(135deg, ${ACCENT}, ${GOLD})`} tabKey="muse"
+            avgHeightCm={profileStats?.muse.avg_cm ?? null}
+            modeHeightCm={profileStats?.muse.mode_cm ?? null}
+          />
           <TypeOverview disliked={museData.mostDisliked} reported={museData.mostReported} />
         </>
       )}
