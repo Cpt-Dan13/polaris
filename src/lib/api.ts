@@ -77,9 +77,21 @@ export const api = {
   },
 }
 
+export interface DistBucket { label: string; pct: number }
+
 export interface ProfileAnalyticsData {
-  patriarch: { avg_cm: number | null; mode_cm: number | null; avg_age: number | null; mode_age: number | null }
-  muse:      { avg_cm: number | null; mode_cm: number | null; avg_age: number | null; mode_age: number | null }
+  patriarch: {
+    avg_cm: number | null; mode_cm: number | null
+    avg_age: number | null; mode_age: number | null
+    height_dist: { dist: DistBucket[]; mostIdx: number }
+    age_dist:    { dist: DistBucket[]; mostIdx: number }
+  }
+  muse: {
+    avg_cm: number | null; mode_cm: number | null
+    avg_age: number | null; mode_age: number | null
+    height_dist: { dist: DistBucket[]; mostIdx: number }
+    age_dist:    { dist: DistBucket[]; mostIdx: number }
+  }
 }
 
 export interface SwipeAnalyticsData {

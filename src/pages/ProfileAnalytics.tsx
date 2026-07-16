@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import {
   UserCheck, Heart, Network, Award, Eye, ThumbsDown, AlertTriangle,
-  SlidersHorizontal,
+  SlidersHorizontal, Loader,
 } from 'lucide-react';
 import { api } from '../lib/api';
-import type { ProfileAnalyticsData } from '../lib/api';
+import type { ProfileAnalyticsData, DistBucket } from '../lib/api';
 
 function cmToFt(cm: number | null): string {
   if (!cm) return '—';
@@ -400,14 +400,16 @@ function RankCard({ rank, initials, name, sub, primary, primaryLabel, gradient }
 
 // ─── Patriarch / Muse tab ─────────────────────────────────────────────────────
 
-function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge, modeAge }: {
+function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge, modeAge, heightDistData, ageDistData }: {
   data: typeof patriarchData;
   gradient: string;
   tabKey: string;
-  avgHeightCm:  number | null;
-  modeHeightCm: number | null;
-  avgAge:       number | null;
-  modeAge:      number | null;
+  avgHeightCm:    number | null;
+  modeHeightCm:   number | null;
+  avgAge:         number | null;
+  modeAge:        number | null;
+  heightDistData: { dist: DistBucket[]; mostIdx: number } | null;
+  ageDistData:    { dist: DistBucket[]; mostIdx: number } | null;
 }) {
   const [graphType, setGraphType] = useState<GraphType>('bar');
 
@@ -435,20 +437,20 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
                style={{ color: 'var(--text-secondary)' }}>
               Height Distribution
             </p>
-            <DistChart
-              dist={data.heightDist} mostIdx={data.mostHeightIdx}
-              type={graphType} uid={`${tabKey}-height`}
-            />
+            {heightDistData
+              ? <DistChart dist={heightDistData.dist} mostIdx={heightDistData.mostIdx} type={graphType} uid={`${tabKey}-height`} />
+              : <div className="flex justify-center py-6"><Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} /></div>
+            }
           </div>
           <div className="card p-5">
             <p className="text-xs font-semibold uppercase tracking-wider mb-4"
                style={{ color: 'var(--text-secondary)' }}>
               Age Distribution
             </p>
-            <DistChart
-              dist={data.ageDist} mostIdx={data.mostAgeIdx}
-              type={graphType} uid={`${tabKey}-age`}
-            />
+            {ageDistData
+              ? <DistChart dist={ageDistData.dist} mostIdx={ageDistData.mostIdx} type={graphType} uid={`${tabKey}-age`} />
+              : <div className="flex justify-center py-6"><Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} /></div>
+            }
           </div>
         </div>
       </div>
@@ -670,6 +672,8 @@ export default function ProfileAnalytics() {
             modeHeightCm={profileStats?.patriarch.mode_cm ?? null}
             avgAge={profileStats?.patriarch.avg_age       ?? null}
             modeAge={profileStats?.patriarch.mode_age     ?? null}
+            heightDistData={profileStats?.patriarch.height_dist ?? null}
+            ageDistData={profileStats?.patriarch.age_dist    ?? null}
           />
           <TypeOverview disliked={patriarchData.mostDisliked} reported={patriarchData.mostReported} />
         </>
@@ -682,6 +686,8 @@ export default function ProfileAnalytics() {
             modeHeightCm={profileStats?.muse.mode_cm ?? null}
             avgAge={profileStats?.muse.avg_age       ?? null}
             modeAge={profileStats?.muse.mode_age     ?? null}
+            heightDistData={profileStats?.muse.height_dist ?? null}
+            ageDistData={profileStats?.muse.age_dist    ?? null}
           />
           <TypeOverview disliked={museData.mostDisliked} reported={museData.mostReported} />
         </>
