@@ -1,5 +1,5 @@
 ﻿import {
-  LayoutDashboard, Bot, Activity, Clock,
+  LayoutDashboard, Bot, Clock,
   Users, Headphones, Star, Flag, Megaphone, Sparkles, Settings,
   ChevronRight, BarChart2, PieChart, TrendingDown,
   TrendingUp, Radio, CreditCard, DollarSign, ShieldAlert, ClipboardList, LifeBuoy,
@@ -37,7 +37,6 @@ const navItems: NavItem[] = [
 
   { id: 'user-management',     label: 'User Management',     icon: Users,           group: 'Users' },
 
-  { id: 'activity-feed',       label: 'Activity Feed',       icon: Activity,        group: 'Developer' },
   { id: 'bot-management',      label: 'Bot Management',      icon: Bot,             group: 'Developer' },
   { id: 'scheduler',           label: 'Scheduler',           icon: Clock,           group: 'Developer' },
 

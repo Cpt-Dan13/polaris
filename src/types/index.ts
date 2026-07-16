@@ -24,8 +24,6 @@ export type Page =
   // Bots
   | 'bot-management'
   | 'vm-health'
-  | 'activity-feed'
-  | 'persona-manager'
   | 'scheduler'
   // System
   | 'settings';

@@ -6,8 +6,6 @@ import type { Page } from './types';
 import Overview from './pages/Overview';
 import BotManagement from './pages/BotManagement';
 import VMHealthMonitor from './pages/VMHealthMonitor';
-import BotActivityFeed from './pages/BotActivityFeed';
-import PersonaManager from './pages/PersonaManager';
 import Scheduler from './pages/Scheduler';
 import UserManagement from './pages/UserManagement';
 import CustomerService from './pages/CustomerService';
@@ -54,8 +52,6 @@ function PageRenderer({ page }: { page: Page }) {
     // Bots
     case 'bot-management':      return <BotManagement />;
     case 'vm-health':           return <VMHealthMonitor />;
-    case 'activity-feed':       return <BotActivityFeed />;
-    case 'persona-manager':     return <PersonaManager />;
     case 'scheduler':           return <Scheduler />;
     // System
     case 'settings':            return <Settings />;
