@@ -109,19 +109,6 @@ export default function Sidebar({ currentPage, onNavigate, collapsed }: SidebarP
         })}
       </nav>
 
-      <div className="p-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-        <div className="flex items-center gap-3 px-2 py-2 rounded-md" style={{ background: 'rgba(255,255,255,0.04)' }}>
-          <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0" style={{ background: '#e94560', color: '#fff' }}>
-            A
-          </div>
-          {!collapsed && (
-            <div className="overflow-hidden">
-              <div className="text-xs font-medium text-white truncate">Admin</div>
-              <div className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>Super Admin</div>
-            </div>
-          )}
-        </div>
-      </div>
     </aside>
   );
 }

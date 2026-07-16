@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { Save, Shield, Bell, Palette, Database, Key, Globe } from 'lucide-react';
+import { Save, Shield, Bell, Palette, Database, Globe } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
@@ -183,6 +183,7 @@ export default function Settings() {
           Reset Defaults
         </button>
       </div>
+
     </div>
   );
 }

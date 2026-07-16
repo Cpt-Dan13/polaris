@@ -2,8 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Sun, Moon, Bell, PanelLeftClose, PanelLeftOpen, Search,
   ShieldAlert, Flag, DollarSign, LifeBuoy, Bot, TrendingUp, User,
+  Settings, LogOut,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import type { Page } from '../types';
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
@@ -64,7 +67,6 @@ const pageTitles: Record<string, string> = {
   'feedback':          'Feedback',
   'announcements':     'Announcements',
   'user-management':   'User Management',
-  'activity-feed':     'Activity Feed',
   'bot-management':    'Bot Management',
   'scheduler':         'Scheduler',
   'settings':          'Settings',
@@ -76,29 +78,51 @@ interface HeaderProps {
   page: string;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
+  onNavigate: (page: Page) => void;
 }
 
-export default function Header({ page, sidebarCollapsed, onToggleSidebar }: HeaderProps) {
+export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavigate }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
+  const { adminUser, signOut } = useAuth();
 
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [notifs, setNotifs]       = useState<Notification[]>(INITIAL_NOTIFS);
-  const notifRef                  = useRef<HTMLDivElement>(null);
+  const [notifOpen,   setNotifOpen]   = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [signingOut,  setSigningOut]  = useState(false);
+  const [notifs, setNotifs]           = useState<Notification[]>(INITIAL_NOTIFS);
+
+  const notifRef   = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifs.filter(n => !n.read).length;
 
+  // Avatar initials
+  const initials = adminUser?.full_name
+    ? adminUser.full_name.charAt(0).toUpperCase()
+    : (adminUser?.email?.charAt(0).toUpperCase() ?? 'A');
+
   useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setNotifOpen(false);
-      }
+    function handler(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
     }
-    if (notifOpen) document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
+    if (notifOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, [notifOpen]);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
+    }
+    if (profileOpen) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [profileOpen]);
 
   const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, read: true })));
   const markRead    = (id: number) => setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    await signOut();
+  }
 
   return (
     <header
@@ -124,7 +148,7 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar }: Head
         </h1>
       </div>
 
-      {/* Right: search + bell + theme */}
+      {/* Right: search + bell + theme + profile */}
       <div className="flex items-center gap-2">
         <div className="relative hidden sm:flex items-center">
           <Search size={14} className="absolute left-3" style={{ color: 'var(--text-light)' }} />
@@ -132,19 +156,14 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar }: Head
             type="text"
             placeholder="Search..."
             className="pl-8 pr-4 py-1.5 rounded-md text-sm outline-none transition-all"
-            style={{
-              background: 'var(--bg)',
-              border: '1px solid var(--border)',
-              color: 'var(--text)',
-              width: 200,
-            }}
+            style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', width: 200 }}
           />
         </div>
 
         {/* Notification bell */}
         <div className="relative" ref={notifRef}>
           <button
-            onClick={() => setNotifOpen(o => !o)}
+            onClick={() => { setNotifOpen(o => !o); setProfileOpen(false); }}
             className="relative p-2 rounded-md transition-colors"
             style={{ color: notifOpen ? ACCENT : 'var(--text-secondary)' }}
           >
@@ -162,44 +181,24 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar }: Head
           {notifOpen && (
             <div
               className="absolute right-0 rounded-xl shadow-2xl overflow-hidden"
-              style={{
-                top: 'calc(100% + 8px)',
-                width: 380,
-                background: 'var(--card)',
-                border: '1px solid var(--border)',
-                zIndex: 50,
-              }}
+              style={{ top: 'calc(100% + 8px)', width: 380, background: 'var(--card)', border: '1px solid var(--border)', zIndex: 50 }}
             >
-              {/* Tray header */}
-              <div
-                className="flex items-center justify-between px-4 py-3"
-                style={{ borderBottom: '1px solid var(--border)' }}
-              >
+              <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-                    Notifications
-                  </span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Notifications</span>
                   {unreadCount > 0 && (
-                    <span
-                      className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
-                      style={{ background: `${ACCENT}18`, color: ACCENT }}
-                    >
+                    <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: `${ACCENT}18`, color: ACCENT }}>
                       {unreadCount} new
                     </span>
                   )}
                 </div>
                 {unreadCount > 0 && (
-                  <button
-                    onClick={markAllRead}
-                    className="text-xs font-medium transition-colors"
-                    style={{ color: 'var(--text-light)' }}
-                  >
+                  <button onClick={markAllRead} className="text-xs font-medium" style={{ color: 'var(--text-light)' }}>
                     Mark all read
                   </button>
                 )}
               </div>
 
-              {/* Notification items */}
               <div className="overflow-y-auto" style={{ maxHeight: 420 }}>
                 {notifs.map((n, idx) => {
                   const meta = NOTIF_META[n.type];
@@ -214,50 +213,26 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar }: Head
                         borderBottom: idx < notifs.length - 1 ? '1px solid var(--border)' : 'none',
                       }}
                     >
-                      {/* Icon */}
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                        style={{ background: meta.bg }}
-                      >
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: meta.bg }}>
                         <Icon size={14} style={{ color: meta.color }} />
                       </div>
-
-                      {/* Text */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span
-                            className="text-xs truncate"
-                            style={{ color: 'var(--text)', fontWeight: n.read ? 500 : 700 }}
-                          >
+                          <span className="text-xs truncate" style={{ color: 'var(--text)', fontWeight: n.read ? 500 : 700 }}>
                             {n.title}
                           </span>
-                          {!n.read && (
-                            <div
-                              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                              style={{ background: ACCENT }}
-                            />
-                          )}
+                          {!n.read && <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />}
                         </div>
-                        <div className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                          {n.body}
-                        </div>
-                        <div className="text-xs mt-1" style={{ color: 'var(--text-light)' }}>
-                          {n.time}
-                        </div>
+                        <div className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>{n.body}</div>
+                        <div className="text-xs mt-1" style={{ color: 'var(--text-light)' }}>{n.time}</div>
                       </div>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Tray footer */}
-              <div
-                className="px-4 py-2.5 text-center"
-                style={{ borderTop: '1px solid var(--border)' }}
-              >
-                <button className="text-xs font-semibold" style={{ color: ACCENT }}>
-                  View all notifications
-                </button>
+              <div className="px-4 py-2.5 text-center" style={{ borderTop: '1px solid var(--border)' }}>
+                <button className="text-xs font-semibold" style={{ color: ACCENT }}>View all notifications</button>
               </div>
             </div>
           )}
@@ -272,6 +247,56 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar }: Head
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
+
+        {/* Profile avatar + dropdown */}
+        <div className="relative ml-1" ref={profileRef}>
+          <button
+            onClick={() => { setProfileOpen(o => !o); setNotifOpen(false); }}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-opacity"
+            style={{ background: ACCENT, color: '#fff', opacity: profileOpen ? 0.8 : 1 }}
+            title={adminUser?.full_name ?? 'Profile'}
+          >
+            {initials}
+          </button>
+
+          {profileOpen && (
+            <div
+              className="absolute right-0 rounded-xl shadow-2xl overflow-hidden"
+              style={{ top: 'calc(100% + 8px)', width: 210, background: 'var(--card)', border: '1px solid var(--border)', zIndex: 50 }}
+            >
+              {/* Identity */}
+              <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+                <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
+                  {adminUser?.full_name ?? 'Admin'}
+                </div>
+                <div className="text-xs mt-0.5 truncate capitalize" style={{ color: 'var(--text-secondary)' }}>
+                  {adminUser?.role?.replace(/_/g, ' ')}
+                </div>
+              </div>
+
+              {/* Menu */}
+              <div className="p-1.5">
+                <button
+                  onClick={() => { onNavigate('settings'); setProfileOpen(false); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors hover:bg-[var(--bg)]"
+                  style={{ color: 'var(--text)' }}
+                >
+                  <Settings size={14} style={{ color: 'var(--text-secondary)' }} />
+                  Settings
+                </button>
+                <button
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors hover:bg-[var(--bg)]"
+                  style={{ color: ACCENT, opacity: signingOut ? 0.6 : 1, cursor: signingOut ? 'not-allowed' : 'pointer' }}
+                >
+                  <LogOut size={14} />
+                  {signingOut ? 'Signing out…' : 'Sign out'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

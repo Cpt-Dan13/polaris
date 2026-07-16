@@ -15,7 +15,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
       <Sidebar currentPage={currentPage} onNavigate={onNavigate} collapsed={collapsed} />
-      <Header page={currentPage} sidebarCollapsed={collapsed} onToggleSidebar={() => setCollapsed(c => !c)} />
+      <Header page={currentPage} sidebarCollapsed={collapsed} onToggleSidebar={() => setCollapsed(c => !c)} onNavigate={onNavigate} />
       <main
         className="transition-all duration-300"
         style={{

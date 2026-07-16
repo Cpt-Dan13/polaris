@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
+import Login from './pages/Login';
 import type { Page } from './types';
 
 import Overview from './pages/Overview';
@@ -59,14 +61,41 @@ function PageRenderer({ page }: { page: Page }) {
   }
 }
 
-function App() {
+function AppShell() {
+  const { session, loading } = useAuth();
   const [currentPage, setCurrentPage] = useState<Page>('overview');
 
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg)',
+        color: 'var(--text-secondary)',
+        fontSize: 14,
+      }}>
+        Loading…
+      </div>
+    );
+  }
+
+  if (!session) return <Login />;
+
+  return (
+    <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
+      <PageRenderer page={currentPage} key={currentPage} />
+    </Layout>
+  );
+}
+
+function App() {
   return (
     <ThemeProvider>
-      <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
-        <PageRenderer page={currentPage} key={currentPage} />
-      </Layout>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
     </ThemeProvider>
   );
 }
