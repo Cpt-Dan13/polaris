@@ -4,7 +4,7 @@ import {
   SlidersHorizontal, Loader,
 } from 'lucide-react';
 import { api } from '../lib/api';
-import type { ProfileAnalyticsData, DistBucket, TopPerformingEntry, MostPopularEntry } from '../lib/api';
+import type { ProfileAnalyticsData, DistBucket, TopPerformingEntry, MostPopularEntry, MostDislikedEntry, MostReportedEntry } from '../lib/api';
 
 function cmToFt(cm: number | null): string {
   if (!cm) return '—';
@@ -556,8 +556,8 @@ function TypeOverview({
   disliked,
   reported,
 }: {
-  disliked:  { name: string; passRate: number; passes: number }[];
-  reported:  { name: string; reports: number; blocks: number; severity: 'high' | 'medium' | 'low' }[];
+  disliked: MostDislikedEntry[] | null;
+  reported: MostReportedEntry[] | null;
 }) {
   return (
     <div className="space-y-4">
@@ -569,22 +569,28 @@ function TypeOverview({
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Most Disliked</h3>
             <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>by pass rate</span>
           </div>
-          <div className="space-y-2.5">
-            {disliked.map(p => (
-              <div key={p.name} className="p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>@{p.name}</span>
-                  <span className="text-xs font-bold" style={{ color: '#f44336' }}>{p.passRate}%</span>
+          {disliked === null
+            ? <div className="flex justify-center py-6"><Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} /></div>
+            : disliked.length === 0
+              ? <p className="text-xs text-center py-4" style={{ color: 'var(--text-light)' }}>No data yet</p>
+              : <div className="space-y-2">
+                  {disliked.map((p, i) => (
+                    <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
+                      <div className="text-base font-black w-5 text-center flex-shrink-0"
+                           style={{ color: RANK_COLORS[i] ?? 'var(--text-light)' }}>
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{p.name}</div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-sm font-bold" style={{ color: '#f44336' }}>{p.passes.toLocaleString()}</div>
+                        <div className="text-xs" style={{ color: 'var(--text-light)' }}>passes</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
-                  <div className="h-full rounded-full" style={{ width: `${p.passRate}%`, background: '#f44336' }} />
-                </div>
-                <div className="text-xs mt-1" style={{ color: 'var(--text-light)' }}>
-                  {p.passes.toLocaleString()} passes
-                </div>
-              </div>
-            ))}
-          </div>
+          }
         </div>
 
         {/* Most Reported */}
@@ -594,30 +600,35 @@ function TypeOverview({
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Most Reported</h3>
             <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>pending review</span>
           </div>
-          <div className="space-y-2">
-            {reported.map(p => {
-              const sevBg  = p.severity === 'high' ? 'rgba(244,67,54,0.1)' : p.severity === 'medium' ? 'rgba(255,152,0,0.1)' : 'rgba(76,175,80,0.1)';
-              const sevClr = p.severity === 'high' ? '#f44336'             : p.severity === 'medium' ? '#ff9800'             : '#4caf50';
-              return (
-                <div key={p.name} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                       style={{ background: 'rgba(244,67,54,0.12)' }}>
-                    <AlertTriangle size={13} style={{ color: '#f44336' }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>@{p.name}</div>
-                    <div className="text-xs mt-0.5" style={{ color: 'var(--text-light)' }}>
-                      {p.reports} reports · {p.blocks} blocks
-                    </div>
-                  </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold capitalize flex-shrink-0"
-                        style={{ background: sevBg, color: sevClr }}>
-                    {p.severity}
-                  </span>
+          {reported === null
+            ? <div className="flex justify-center py-6"><Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} /></div>
+            : reported.length === 0
+              ? <p className="text-xs text-center py-4" style={{ color: 'var(--text-light)' }}>No data yet</p>
+              : <div className="space-y-2">
+                  {reported.map(p => {
+                    const sevBg  = p.severity === 'high' ? 'rgba(244,67,54,0.1)' : p.severity === 'medium' ? 'rgba(255,152,0,0.1)' : 'rgba(76,175,80,0.1)';
+                    const sevClr = p.severity === 'high' ? '#f44336'             : p.severity === 'medium' ? '#ff9800'             : '#4caf50';
+                    return (
+                      <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                             style={{ background: 'rgba(244,67,54,0.12)' }}>
+                          <AlertTriangle size={13} style={{ color: '#f44336' }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{p.name}</div>
+                          <div className="text-xs mt-0.5" style={{ color: 'var(--text-light)' }}>
+                            {p.reports} reports · {p.blocks} blocks
+                          </div>
+                        </div>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold capitalize flex-shrink-0"
+                              style={{ background: sevBg, color: sevClr }}>
+                          {p.severity}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
+          }
         </div>
       </div>
 
@@ -691,7 +702,10 @@ export default function ProfileAnalytics() {
             topPerforming={profileStats?.patriarch.top_performing ?? null}
             mostPopular={profileStats?.patriarch.most_popular     ?? null}
           />
-          <TypeOverview disliked={patriarchData.mostDisliked} reported={patriarchData.mostReported} />
+          <TypeOverview
+            disliked={profileStats?.patriarch.most_disliked ?? null}
+            reported={profileStats?.patriarch.most_reported ?? null}
+          />
         </>
       )}
       {tab === 'muses' && (
@@ -707,13 +721,16 @@ export default function ProfileAnalytics() {
             topPerforming={profileStats?.muse.top_performing ?? null}
             mostPopular={profileStats?.muse.most_popular     ?? null}
           />
-          <TypeOverview disliked={museData.mostDisliked} reported={museData.mostReported} />
+          <TypeOverview
+            disliked={profileStats?.muse.most_disliked ?? null}
+            reported={profileStats?.muse.most_reported ?? null}
+          />
         </>
       )}
       {tab === 'constellations' && (
         <>
           <ConstellationTab />
-          <TypeOverview disliked={constellationData.mostDisliked} reported={constellationData.mostReported} />
+          <TypeOverview disliked={null} reported={null} />
         </>
       )}
     </div>

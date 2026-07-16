@@ -81,6 +81,8 @@ export interface DistBucket { label: string; pct: number }
 
 export interface TopPerformingEntry { id: string; name: string; initials: string; stars: number; likes: number }
 export interface MostPopularEntry   { id: string; name: string; initials: string; views: number }
+export interface MostDislikedEntry  { id: string; name: string; passes: number }
+export interface MostReportedEntry  { id: string; name: string; reports: number; blocks: number; severity: 'high' | 'medium' | 'low' }
 
 export interface ProfileAnalyticsData {
   patriarch: {
@@ -90,6 +92,8 @@ export interface ProfileAnalyticsData {
     age_dist:       { dist: DistBucket[]; mostIdx: number }
     top_performing: TopPerformingEntry[]
     most_popular:   MostPopularEntry[]
+    most_disliked:  MostDislikedEntry[]
+    most_reported:  MostReportedEntry[]
   }
   muse: {
     avg_cm: number | null; mode_cm: number | null
@@ -98,6 +102,8 @@ export interface ProfileAnalyticsData {
     age_dist:       { dist: DistBucket[]; mostIdx: number }
     top_performing: TopPerformingEntry[]
     most_popular:   MostPopularEntry[]
+    most_disliked:  MostDislikedEntry[]
+    most_reported:  MostReportedEntry[]
   }
 }
 
