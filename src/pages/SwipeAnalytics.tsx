@@ -129,7 +129,7 @@ function DecisionDonut({ likePct, passPct, superLikePct }: { likePct: number; pa
   const slices = [
     { label: 'Like',       pct: likePct,       color: GREEN  },
     { label: 'Pass',       pct: passPct,       color: PASS_C },
-    { label: 'Super Like', pct: superLikePct, color: GOLD   },
+    { label: 'Shooting Star', pct: superLikePct, color: GOLD   },
   ];
   let cumPct = 0;
 
@@ -316,7 +316,7 @@ export default function SwipeAnalytics() {
     { label: 'Total Swipes Today', value: fmtK(data.kpis.total_swipes_today), icon: Zap   },
     { label: 'Like Rate',          value: `${data.kpis.like_rate}%`,           icon: Heart },
     { label: 'Match Rate',         value: `${data.kpis.match_rate}%`,          icon: Link2 },
-    { label: 'Super Likes',        value: fmtK(data.kpis.super_likes_today),   icon: Star  },
+    { label: 'Shooting Stars',      value: fmtK(data.kpis.super_likes_today),   icon: Star  },
   ] : [];
 
   if (error) {
