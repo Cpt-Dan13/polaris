@@ -558,6 +558,8 @@ function TypeOverview({
   reported:      MostReportedEntry[] | null;
   ethnicityDist?: DistBucket[]       | null;
 }) {
+  const [hoveredEthnicity, setHoveredEthnicity] = useState<string | null>(null);
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -639,22 +641,55 @@ function TypeOverview({
           : ethnicityDist.length === 0
             ? <p className="text-xs text-center py-4" style={{ color: 'var(--text-light)' }}>No data yet</p>
             : <>
-                <div className="flex h-6 rounded-lg overflow-hidden gap-px mb-4">
-                  {ethnicityDist.map(e => {
-                    const color = ETHNICITY_COLORS[e.label] ?? '#9e9e9e';
+                <div className="flex h-6 gap-px mb-5">
+                  {ethnicityDist.map((e, i, arr) => {
+                    const color    = ETHNICITY_COLORS[e.label] ?? '#9e9e9e';
+                    const isHot    = hoveredEthnicity === e.label;
+                    const isDim    = hoveredEthnicity !== null && !isHot;
+                    const isFirst  = i === 0;
+                    const isLast   = i === arr.length - 1;
                     return (
-                      <div key={e.label} style={{ width: `${e.pct}%`, background: color, minWidth: e.pct > 0 ? 2 : 0 }}
-                           title={`${e.label}: ${e.pct}%`} />
+                      <div
+                        key={e.label}
+                        title={`${e.label}: ${e.pct}%`}
+                        onMouseEnter={() => setHoveredEthnicity(e.label)}
+                        onMouseLeave={() => setHoveredEthnicity(null)}
+                        style={{
+                          width:        `${e.pct}%`,
+                          background:   color,
+                          minWidth:     e.pct > 0 ? 2 : 0,
+                          borderRadius: isFirst ? '6px 0 0 6px' : isLast ? '0 6px 6px 0' : 0,
+                          transform:    isHot ? 'scaleY(1.45)' : 'scaleY(1)',
+                          filter:       isDim ? 'brightness(0.5) saturate(0.5)' : 'none',
+                          transition:   'transform 0.18s ease, filter 0.18s ease',
+                          cursor:       'default',
+                        }}
+                      />
                     );
                   })}
                 </div>
                 <div className="flex flex-wrap gap-x-5 gap-y-2">
                   {ethnicityDist.map(e => {
-                    const color = ETHNICITY_COLORS[e.label] ?? '#9e9e9e';
+                    const color   = ETHNICITY_COLORS[e.label] ?? '#9e9e9e';
+                    const isHot   = hoveredEthnicity === e.label;
+                    const isDim   = hoveredEthnicity !== null && !isHot;
                     return (
-                      <div key={e.label} className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
-                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{e.label}</span>
+                      <div
+                        key={e.label}
+                        className="flex items-center gap-2 cursor-default"
+                        onMouseEnter={() => setHoveredEthnicity(e.label)}
+                        onMouseLeave={() => setHoveredEthnicity(null)}
+                        style={{ opacity: isDim ? 0.35 : 1, transition: 'opacity 0.18s ease' }}
+                      >
+                        <div
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{
+                            background:  color,
+                            transform:   isHot ? 'scale(1.4)' : 'scale(1)',
+                            transition:  'transform 0.18s ease',
+                          }}
+                        />
+                        <span className="text-xs font-medium" style={{ color: isHot ? 'var(--text)' : 'var(--text-secondary)', transition: 'color 0.18s ease' }}>{e.label}</span>
                         <span className="text-xs font-bold" style={{ color: 'var(--text)' }}>{e.pct}%</span>
                       </div>
                     );
