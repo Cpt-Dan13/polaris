@@ -127,14 +127,18 @@ const museData = {
 };
 
 
-const ethnicityData = [
-  { label: 'Black / African',    pct: 42, color: '#e94560' },
-  { label: 'Hispanic / Latino',  pct: 23, color: '#c8972b' },
-  { label: 'White / Caucasian',  pct: 18, color: '#4caf50' },
-  { label: 'Asian',              pct: 9,  color: '#2196f3' },
-  { label: 'Mixed',              pct: 6,  color: '#9c27b0' },
-  { label: 'Other',              pct: 2,  color: '#607d8b' },
-];
+const ETHNICITY_COLORS: Record<string, string> = {
+  'Black / African Descent': '#e94560',
+  'Hispanic / Latino':       '#c8972b',
+  'White / Caucasian':       '#4caf50',
+  'East Asian':              '#2196f3',
+  'Southeast Asian':         '#ff5722',
+  'South Asian':             '#9c27b0',
+  'Middle Eastern':          '#00bcd4',
+  'Native American':         '#795548',
+  'Pacific Islander':        '#607d8b',
+  'Other':                   '#9e9e9e',
+};
 
 const constellationData = {
   topPerforming: [
@@ -555,9 +559,11 @@ function ConstellationTab() {
 function TypeOverview({
   disliked,
   reported,
+  ethnicityDist,
 }: {
-  disliked: MostDislikedEntry[] | null;
-  reported: MostReportedEntry[] | null;
+  disliked:      MostDislikedEntry[] | null;
+  reported:      MostReportedEntry[] | null;
+  ethnicityDist?: DistBucket[]       | null;
 }) {
   return (
     <div className="space-y-4">
@@ -633,24 +639,37 @@ function TypeOverview({
       </div>
 
       {/* Ethnicity Distribution */}
-      <div className="card p-5">
+      {ethnicityDist !== undefined && <div className="card p-5">
         <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>Ethnicity Distribution</h3>
-        <div className="flex h-6 rounded-lg overflow-hidden gap-px mb-4">
-          {ethnicityData.map(e => (
-            <div key={e.label} style={{ width: `${e.pct}%`, background: e.color }}
-                 title={`${e.label}: ${e.pct}%`} />
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-x-5 gap-y-2">
-          {ethnicityData.map(e => (
-            <div key={e.label} className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: e.color }} />
-              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{e.label}</span>
-              <span className="text-xs font-bold" style={{ color: 'var(--text)' }}>{e.pct}%</span>
-            </div>
-          ))}
-        </div>
-      </div>
+        {ethnicityDist === null
+          ? <div className="flex justify-center py-6"><Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} /></div>
+          : ethnicityDist.length === 0
+            ? <p className="text-xs text-center py-4" style={{ color: 'var(--text-light)' }}>No data yet</p>
+            : <>
+                <div className="flex h-6 rounded-lg overflow-hidden gap-px mb-4">
+                  {ethnicityDist.map(e => {
+                    const color = ETHNICITY_COLORS[e.label] ?? '#9e9e9e';
+                    return (
+                      <div key={e.label} style={{ width: `${e.pct}%`, background: color, minWidth: e.pct > 0 ? 2 : 0 }}
+                           title={`${e.label}: ${e.pct}%`} />
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  {ethnicityDist.map(e => {
+                    const color = ETHNICITY_COLORS[e.label] ?? '#9e9e9e';
+                    return (
+                      <div key={e.label} className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
+                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{e.label}</span>
+                        <span className="text-xs font-bold" style={{ color: 'var(--text)' }}>{e.pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+        }
+      </div>}
     </div>
   );
 }
@@ -703,8 +722,9 @@ export default function ProfileAnalytics() {
             mostPopular={profileStats?.patriarch.most_popular     ?? null}
           />
           <TypeOverview
-            disliked={profileStats?.patriarch.most_disliked ?? null}
-            reported={profileStats?.patriarch.most_reported ?? null}
+            disliked={profileStats?.patriarch.most_disliked  ?? null}
+            reported={profileStats?.patriarch.most_reported  ?? null}
+            ethnicityDist={profileStats?.patriarch.ethnicity_dist ?? null}
           />
         </>
       )}
@@ -722,8 +742,9 @@ export default function ProfileAnalytics() {
             mostPopular={profileStats?.muse.most_popular     ?? null}
           />
           <TypeOverview
-            disliked={profileStats?.muse.most_disliked ?? null}
-            reported={profileStats?.muse.most_reported ?? null}
+            disliked={profileStats?.muse.most_disliked  ?? null}
+            reported={profileStats?.muse.most_reported  ?? null}
+            ethnicityDist={profileStats?.muse.ethnicity_dist ?? null}
           />
         </>
       )}

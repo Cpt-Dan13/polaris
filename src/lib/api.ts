@@ -90,6 +90,7 @@ export interface ProfileAnalyticsData {
     avg_age: number | null; mode_age: number | null
     height_dist:    { dist: DistBucket[]; mostIdx: number }
     age_dist:       { dist: DistBucket[]; mostIdx: number }
+    ethnicity_dist: DistBucket[]
     top_performing: TopPerformingEntry[]
     most_popular:   MostPopularEntry[]
     most_disliked:  MostDislikedEntry[]
@@ -100,6 +101,7 @@ export interface ProfileAnalyticsData {
     avg_age: number | null; mode_age: number | null
     height_dist:    { dist: DistBucket[]; mostIdx: number }
     age_dist:       { dist: DistBucket[]; mostIdx: number }
+    ethnicity_dist: DistBucket[]
     top_performing: TopPerformingEntry[]
     most_popular:   MostPopularEntry[]
     most_disliked:  MostDislikedEntry[]
