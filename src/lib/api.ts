@@ -79,10 +79,12 @@ export const api = {
 
 export interface DistBucket { label: string; pct: number }
 
-export interface TopPerformingEntry { id: string; name: string; initials: string; stars: number; likes: number }
-export interface MostPopularEntry   { id: string; name: string; initials: string; views: number }
-export interface MostDislikedEntry  { id: string; name: string; passes: number }
-export interface MostReportedEntry  { id: string; name: string; reports: number; blocks: number; severity: 'high' | 'medium' | 'low' }
+export interface TopPerformingEntry         { id: string; name: string; initials: string; stars: number; likes: number }
+export interface MostPopularEntry           { id: string; name: string; initials: string; views: number }
+export interface MostDislikedEntry          { id: string; name: string; passes: number }
+export interface MostReportedEntry          { id: string; name: string; reports: number; blocks: number; severity: 'high' | 'medium' | 'low' }
+export interface ConstellationTopEntry      { id: string; name: string; initials: string; member_count: number; stars: number; likes: number }
+export interface ConstellationPopularEntry  { id: string; name: string; initials: string; member_count: number; views: number }
 
 export interface ProfileAnalyticsData {
   patriarch: {
@@ -106,6 +108,10 @@ export interface ProfileAnalyticsData {
     most_popular:   MostPopularEntry[]
     most_disliked:  MostDislikedEntry[]
     most_reported:  MostReportedEntry[]
+  }
+  constellation: {
+    top_performing: ConstellationTopEntry[]
+    most_popular:   ConstellationPopularEntry[]
   }
 }
 

@@ -4,7 +4,7 @@ import {
   SlidersHorizontal, Loader,
 } from 'lucide-react';
 import { api } from '../lib/api';
-import type { ProfileAnalyticsData, DistBucket, TopPerformingEntry, MostPopularEntry, MostDislikedEntry, MostReportedEntry } from '../lib/api';
+import type { ProfileAnalyticsData, DistBucket, TopPerformingEntry, MostPopularEntry, MostDislikedEntry, MostReportedEntry, ConstellationTopEntry, ConstellationPopularEntry } from '../lib/api';
 
 function cmToFt(cm: number | null): string {
   if (!cm) return '—';
@@ -140,30 +140,6 @@ const ETHNICITY_COLORS: Record<string, string> = {
   'Other':                   '#9e9e9e',
 };
 
-const constellationData = {
-  topPerforming: [
-    { initials: 'WC', name: 'The Webb Constellation', members: 4, stars: 2104, likes: 5891 },
-    { initials: 'OF', name: 'The Okonkwo Family',      members: 3, stars: 1876, likes: 4203 },
-    { initials: 'CD', name: 'The Cross Dynamic',        members: 5, stars: 1644, likes: 3987 },
-  ],
-  mostPopular: [
-    { initials: 'WC', name: 'The Webb Constellation', members: 4, views: 31204 },
-    { initials: 'CD', name: 'The Cross Dynamic',        members: 5, views: 24891 },
-    { initials: 'SF', name: 'The Sunrise Family',       members: 3, views: 21443 },
-  ],
-  mostDisliked: [
-    { name: 'midnight_crew', passRate: 74, passes: 1654 },
-    { name: 'the_outliers',  passRate: 66, passes: 1201 },
-    { name: 'nova_squad',    passRate: 59, passes: 987  },
-    { name: 'anon_group_9',  passRate: 52, passes: 743  },
-  ],
-  mostReported: [
-    { name: 'rick_d',    reports: 28, blocks: 14, severity: 'high'   as const },
-    { name: 'anon_m_99', reports: 21, blocks: 9,  severity: 'high'   as const },
-    { name: 'devin_k',   reports: 18, blocks: 22, severity: 'high'   as const },
-    { name: 'jason_r',   reports: 12, blocks: 7,  severity: 'medium' as const },
-  ],
-};
 
 type Dist = { label: string; pct: number }[];
 
@@ -516,8 +492,13 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
 
 // ─── Constellations tab ───────────────────────────────────────────────────────
 
-function ConstellationTab() {
-  const d = constellationData;
+function ConstellationTab({
+  topPerforming,
+  mostPopular,
+}: {
+  topPerforming: ConstellationTopEntry[]   | null;
+  mostPopular:   ConstellationPopularEntry[] | null;
+}) {
   const gradient = `linear-gradient(135deg, ${ACCENT}, ${GOLD})`;
 
   return (
@@ -529,25 +510,37 @@ function ConstellationTab() {
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Top Performing</h3>
             <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>by stars &amp; likes</span>
           </div>
-          <div className="space-y-2">
-            {d.topPerforming.map((c, i) => (
-              <RankCard key={c.name} rank={i} initials={c.initials} name={c.name}
-                sub={`${c.members} members`} primary={c.stars} primaryLabel="stars" gradient={gradient} />
-            ))}
-          </div>
+          {topPerforming === null
+            ? <div className="flex justify-center py-6"><Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} /></div>
+            : topPerforming.length === 0
+              ? <p className="text-xs text-center py-4" style={{ color: 'var(--text-light)' }}>No data yet</p>
+              : <div className="space-y-2">
+                  {topPerforming.map((c, i) => (
+                    <RankCard key={c.id} rank={i} initials={c.initials} name={c.name}
+                      sub={`${c.member_count} member${c.member_count === 1 ? '' : 's'}`}
+                      primary={c.stars} primaryLabel="stars" gradient={gradient} />
+                  ))}
+                </div>
+          }
         </div>
         <div className="card p-5">
           <div className="flex items-center gap-2 mb-4">
             <Eye size={15} style={{ color: ACCENT }} />
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Most Popular</h3>
-            <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>by profile views</span>
+            <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>by constellation views</span>
           </div>
-          <div className="space-y-2">
-            {d.mostPopular.map((c, i) => (
-              <RankCard key={c.name} rank={i} initials={c.initials} name={c.name}
-                sub={`${c.members} members`} primary={c.views} primaryLabel="views" gradient={gradient} />
-            ))}
-          </div>
+          {mostPopular === null
+            ? <div className="flex justify-center py-6"><Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} /></div>
+            : mostPopular.length === 0
+              ? <p className="text-xs text-center py-4" style={{ color: 'var(--text-light)' }}>No data yet</p>
+              : <div className="space-y-2">
+                  {mostPopular.map((c, i) => (
+                    <RankCard key={c.id} rank={i} initials={c.initials} name={c.name}
+                      sub={`${c.member_count} member${c.member_count === 1 ? '' : 's'}`}
+                      primary={c.views} primaryLabel="views" gradient={gradient} />
+                  ))}
+                </div>
+          }
         </div>
       </div>
     </div>
@@ -750,7 +743,10 @@ export default function ProfileAnalytics() {
       )}
       {tab === 'constellations' && (
         <>
-          <ConstellationTab />
+          <ConstellationTab
+            topPerforming={profileStats?.constellation.top_performing ?? null}
+            mostPopular={profileStats?.constellation.most_popular     ?? null}
+          />
           <TypeOverview disliked={null} reported={null} />
         </>
       )}
