@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  UserCheck, Heart, Network, Award, Eye, ThumbsDown, AlertTriangle,
+  Award, Eye, ThumbsDown, AlertTriangle,
   SlidersHorizontal, Loader,
 } from 'lucide-react';
 import { api } from '../lib/api';
@@ -32,10 +32,10 @@ const ROLE_GRADIENTS: Record<string, string> = {
 
 type Tab = 'patriarchs' | 'muses' | 'constellations';
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'patriarchs',     label: 'Patriarchs',    icon: <UserCheck size={14} /> },
-  { id: 'muses',          label: 'Muses',          icon: <Heart     size={14} /> },
-  { id: 'constellations', label: 'Constellations', icon: <Network   size={14} /> },
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'patriarchs',     label: 'Patriarchs'    },
+  { id: 'muses',          label: 'Muses'          },
+  { id: 'constellations', label: 'Constellations' },
 ];
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -405,9 +405,10 @@ function StatPill({ label, value, sub }: { label: string; value: string | number
 
 // ─── Shared RankCard ──────────────────────────────────────────────────────────
 
-function RankCard({ rank, initials, name, sub, primary, primaryLabel, gradient, isHot, isDim, onMouseEnter, onMouseLeave }: {
+function RankCard({ rank, initials, name, sub, primary, primaryLabel, gradient, photoUrl, isHot, isDim, onMouseEnter, onMouseLeave }: {
   rank: number; initials: string; name: string; sub: string;
   primary: number; primaryLabel: string; gradient: string;
+  photoUrl?: string | null;
   isHot?: boolean; isDim?: boolean;
   onMouseEnter?: () => void; onMouseLeave?: () => void;
 }) {
@@ -429,9 +430,12 @@ function RankCard({ rank, initials, name, sub, primary, primaryLabel, gradient, 
            style={{ color: RANK_COLORS[rank] ?? 'var(--text-light)' }}>
         {rank + 1}
       </div>
-      <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+      <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden"
            style={{ background: gradient }}>
-        {initials}
+        {photoUrl
+          ? <img src={photoUrl} alt={name} className="w-full h-full object-cover" />
+          : <span className="w-full h-full flex items-center justify-center text-xs font-bold text-white">{initials}</span>
+        }
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{name}</div>
@@ -526,6 +530,7 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
                       sub={`${p.likes.toLocaleString()} likes`}
                       primary={p.stars} primaryLabel="stars"
                       gradient={gradient}
+                      photoUrl={p.photo_url}
                       isHot={hoveredTop === i}
                       isDim={hoveredTop !== null && hoveredTop !== i}
                       onMouseEnter={() => setHoveredTop(i)}
@@ -553,6 +558,7 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
                       sub="unique profile visits"
                       primary={p.views} primaryLabel="views"
                       gradient={gradient}
+                      photoUrl={p.photo_url}
                       isHot={hoveredPop === i}
                       isDim={hoveredPop !== null && hoveredPop !== i}
                       onMouseEnter={() => setHoveredPop(i)}
@@ -679,6 +685,14 @@ function TypeOverview({
                              style={{ color: RANK_COLORS[i] ?? 'var(--text-light)' }}>
                           {i + 1}
                         </div>
+                        <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden"
+                             style={{ background: 'rgba(255,152,0,0.15)' }}>
+                          {p.photo_url
+                            ? <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" />
+                            : <span className="w-full h-full flex items-center justify-center text-xs font-bold"
+                                    style={{ color: '#ff9800' }}>{p.initials}</span>
+                          }
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{p.name}</div>
                         </div>
@@ -722,9 +736,13 @@ function TypeOverview({
                              transition:  'transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease',
                              cursor:      'default',
                            }}>
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                        <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden"
                              style={{ background: 'rgba(244,67,54,0.12)' }}>
-                          <AlertTriangle size={13} style={{ color: '#f44336' }} />
+                          {p.photo_url
+                            ? <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" />
+                            : <span className="w-full h-full flex items-center justify-center text-xs font-bold"
+                                    style={{ color: '#f44336' }}>{p.initials}</span>
+                          }
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{p.name}</div>
@@ -816,7 +834,8 @@ function TypeOverview({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ProfileAnalytics() {
-  const [tab, setTab] = useState<Tab>('patriarchs');
+  const [tab, setTab]           = useState<Tab>('patriarchs');
+  const [hoveredTab, setHoveredTab] = useState<Tab | null>(null);
   const [profileStats, setProfileStats] = useState<ProfileAnalyticsData | null>(null);
 
   useEffect(() => {
@@ -825,23 +844,40 @@ export default function ProfileAnalytics() {
 
   return (
     <div className="space-y-5">
-      {/* Pill nav */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Tab nav */}
+      <div className="flex gap-7">
         {TABS.map(t => {
-          const active = tab === t.id;
+          const active  = tab === t.id;
+          const isHover = hoveredTab === t.id;
           return (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+              onMouseEnter={() => setHoveredTab(t.id)}
+              onMouseLeave={() => setHoveredTab(null)}
+              className="relative pb-3 text-sm font-semibold"
               style={{
-                background: active ? ACCENT : 'var(--card)',
-                color:      active ? '#fff' : 'var(--text-secondary)',
-                border: `1px solid ${active ? ACCENT : 'var(--border)'}`,
+                background: 'none',
+                border:     'none',
+                cursor:     'pointer',
+                color:      active ? ACCENT : isHover ? 'var(--text)' : 'var(--text-secondary)',
+                transition: 'color 0.18s ease',
               }}
             >
-              {t.icon}
               {t.label}
+              <span style={{
+                position:        'absolute',
+                bottom:          -1,
+                left:            0,
+                right:           0,
+                height:          2,
+                background:      ACCENT,
+                borderRadius:    1,
+                transform:       active || isHover ? 'scaleX(1)' : 'scaleX(0)',
+                opacity:         active ? 1 : 0.35,
+                transition:      'transform 0.2s ease, opacity 0.2s ease',
+                transformOrigin: 'left',
+              }} />
             </button>
           );
         })}
