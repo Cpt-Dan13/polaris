@@ -41,7 +41,12 @@ body {
   background-color: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  transition: background-color 0.3s, border-color 0.3s;
+  transition: background-color 0.3s, border-color 0.3s, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.card:hover {
+  transform: scale(1.012);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
 }
 
 .sidebar {

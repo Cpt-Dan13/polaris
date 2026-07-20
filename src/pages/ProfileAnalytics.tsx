@@ -175,25 +175,39 @@ function GraphToggle({ value, onChange }: { value: GraphType; onChange: (v: Grap
 // ─── Chart: Bar (horizontal) ──────────────────────────────────────────────────
 
 function BarView({ dist, mostIdx }: { dist: Dist; mostIdx: number }) {
+  const [hovered, setHovered] = useState<number | null>(null);
   return (
     <div className="space-y-2.5">
       {dist.map((row, i) => {
-        const hi = i === mostIdx;
+        const hi    = i === mostIdx;
+        const isHot = hovered === i;
+        const isDim = hovered !== null && !isHot;
         return (
           <div key={row.label} className="flex items-center gap-3">
-            <span className="text-xs w-12 text-right flex-shrink-0" style={{ color: 'var(--text-secondary)' }}>
+            <span className="text-xs w-12 text-right flex-shrink-0"
+                  style={{ color: 'var(--text-secondary)', opacity: isDim ? 0.35 : 1, transition: 'opacity 0.18s ease' }}>
               {row.label}
             </span>
-            <div className="flex-1 h-6 rounded overflow-hidden" style={{ background: 'var(--bg)' }}>
+            <div className="flex-1 h-6 rounded" style={{ background: 'var(--bg)' }}>
               <div
-                className="h-full rounded flex items-center justify-end pr-2 transition-all duration-500"
-                style={{ width: `${row.pct}%`, background: hi ? ACCENT : ACCENT + '35', minWidth: 8 }}
+                className="h-full rounded flex items-center justify-end pr-2"
+                onMouseEnter={() => setHovered(i)}
+                onMouseLeave={() => setHovered(null)}
+                style={{
+                  width:      `${row.pct}%`,
+                  background: hi ? ACCENT : ACCENT + '35',
+                  minWidth:   8,
+                  transform:  isHot ? 'scaleY(1.4)' : 'scaleY(1)',
+                  filter:     isDim ? 'brightness(0.5) saturate(0.5)' : isHot ? 'brightness(1.15)' : 'none',
+                  transition: 'transform 0.18s ease, filter 0.18s ease, width 0.5s',
+                  cursor:     'default',
+                }}
               >
                 {hi && <span className="text-white font-bold" style={{ fontSize: 9 }}>TOP</span>}
               </div>
             </div>
             <span className="text-xs font-semibold w-8 flex-shrink-0"
-                  style={{ color: hi ? ACCENT : 'var(--text-secondary)' }}>
+                  style={{ color: hi ? ACCENT : 'var(--text-secondary)', opacity: isDim ? 0.35 : 1, transition: 'opacity 0.18s ease' }}>
               {row.pct}%
             </span>
           </div>
@@ -223,6 +237,7 @@ function lineSmoothCurve(pts: { x: number; y: number }[]): string {
 }
 
 function LineView({ dist, mostIdx, uid }: { dist: Dist; mostIdx: number; uid: string }) {
+  const [hoveredPt, setHoveredPt] = useState<number | null>(null);
   const W = 100, H = 60;
   const pad = { t: 8, r: 3, b: 0, l: 3 };
   const cW = W - pad.l - pad.r;
@@ -261,24 +276,48 @@ function LineView({ dist, mostIdx, uid }: { dist: Dist; mostIdx: number; uid: st
           <path d={areaPath} fill={`url(#${gid})`} />
           <path d={linePath} fill="none" stroke={ACCENT} strokeWidth="1.4"
                 strokeLinecap="round" strokeLinejoin="round" />
-          {pts.map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y}
-              r={i === mostIdx ? 4 : 2.2}
-              fill={i === mostIdx ? ACCENT : `${ACCENT}55`}
-            />
-          ))}
+          {pts.map((p, i) => {
+            const isHot = hoveredPt === i;
+            const isDim = hoveredPt !== null && !isHot;
+            return (
+              <g key={i}>
+                <circle
+                  cx={p.x} cy={p.y}
+                  r={i === mostIdx ? 4 : 2.2}
+                  fill={i === mostIdx || isHot ? ACCENT : `${ACCENT}55`}
+                  style={{
+                    transformBox:    'fill-box',
+                    transformOrigin: 'center',
+                    transform:  isHot ? 'scale(2.1)' : 'scale(1)',
+                    opacity:    isDim ? 0.25 : 1,
+                    transition: 'transform 0.15s ease, opacity 0.15s ease',
+                  }}
+                />
+                {/* Wider invisible hit area */}
+                <circle cx={p.x} cy={p.y} r={6} fill="transparent" style={{ cursor: 'default' }}
+                  onMouseEnter={() => setHoveredPt(i)}
+                  onMouseLeave={() => setHoveredPt(null)}
+                />
+              </g>
+            );
+          })}
         </svg>
       </div>
       <div className="flex justify-between mt-2">
-        {dist.map((d, i) => (
-          <span key={i} className="text-center flex-1" style={{
-            fontSize: 9,
-            color: i === mostIdx ? ACCENT : 'var(--text-light)',
-            fontWeight: i === mostIdx ? 700 : 400,
-          }}>
-            {d.label}
-          </span>
-        ))}
+        {dist.map((d, i) => {
+          const isDim = hoveredPt !== null && hoveredPt !== i;
+          return (
+            <span key={i} className="text-center flex-1" style={{
+              fontSize:   9,
+              color:      i === mostIdx ? ACCENT : 'var(--text-light)',
+              fontWeight: i === mostIdx ? 700 : 400,
+              opacity:    isDim ? 0.3 : 1,
+              transition: 'opacity 0.15s ease',
+            }}>
+              {d.label}
+            </span>
+          );
+        })}
       </div>
     </div>
   );
@@ -287,30 +326,44 @@ function LineView({ dist, mostIdx, uid }: { dist: Dist; mostIdx: number; uid: st
 // ─── Chart: Scorecard (KPI summary) ──────────────────────────────────────────
 
 function ScoreView({ dist, mostIdx }: { dist: Dist; mostIdx: number }) {
-  const peak = dist[mostIdx];
+  const [hoveredTile, setHoveredTile] = useState<string | null>(null);
+
+  const peak   = dist[mostIdx];
   const sorted = [...dist].sort((a, b) => b.pct - a.pct);
-  const top2 = sorted[0].pct + sorted[1].pct;
+  const top2   = sorted[0].pct + sorted[1].pct;
   const spread = dist.filter(d => d.pct >= 10).length;
-  const range = `${dist[0].label} – ${dist[dist.length - 1].label}`;
+  const range  = `${dist[0].label} – ${dist[dist.length - 1].label}`;
+
+  const tile = (key: string, extra?: React.CSSProperties) => ({
+    onMouseEnter: () => setHoveredTile(key),
+    onMouseLeave: () => setHoveredTile(null),
+    style: {
+      ...extra,
+      transform:  hoveredTile === key ? 'scale(1.035)' : 'scale(1)',
+      boxShadow:  hoveredTile === key ? '0 8px 24px rgba(0,0,0,0.13)' : 'none',
+      transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+      cursor:     'default',
+    } as React.CSSProperties,
+  });
 
   return (
     <div className="grid grid-cols-2 gap-2.5 py-1">
       <div className="col-span-2 rounded-xl p-4 text-center"
-           style={{ background: `${ACCENT}12`, border: `1px solid ${ACCENT}30` }}>
+           {...tile('peak', { background: `${ACCENT}12`, border: `1px solid ${ACCENT}30` })}>
         <div className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: ACCENT }}>
           Peak Preference
         </div>
         <div className="text-3xl font-black" style={{ color: 'var(--text)' }}>{peak.label}</div>
         <div className="text-sm font-semibold mt-0.5" style={{ color: ACCENT }}>{peak.pct}% of users</div>
       </div>
-      <div className="rounded-lg p-3" style={{ background: 'var(--bg)' }}>
+      <div className="rounded-lg p-3" {...tile('top2', { background: 'var(--bg)' })}>
         <div className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-light)', fontSize: 9 }}>
           Top 2 Combined
         </div>
         <div className="text-2xl font-black" style={{ color: 'var(--text)' }}>{top2}%</div>
         <div style={{ color: 'var(--text-light)', fontSize: 9 }}>of all preferences</div>
       </div>
-      <div className="rounded-lg p-3" style={{ background: 'var(--bg)' }}>
+      <div className="rounded-lg p-3" {...tile('spread', { background: 'var(--bg)' })}>
         <div className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-light)', fontSize: 9 }}>
           Spread
         </div>
@@ -318,7 +371,7 @@ function ScoreView({ dist, mostIdx }: { dist: Dist; mostIdx: number }) {
         <div style={{ color: 'var(--text-light)', fontSize: 9 }}>buckets ≥ 10%</div>
       </div>
       <div className="col-span-2 rounded-lg p-3 flex items-center justify-between"
-           style={{ background: 'var(--bg)' }}>
+           {...tile('range', { background: 'var(--bg)' })}>
         <span style={{ color: 'var(--text-light)', fontSize: 10 }}>Full Range</span>
         <span className="font-semibold text-sm" style={{ color: 'var(--text)' }}>{range}</span>
       </div>
@@ -352,12 +405,26 @@ function StatPill({ label, value, sub }: { label: string; value: string | number
 
 // ─── Shared RankCard ──────────────────────────────────────────────────────────
 
-function RankCard({ rank, initials, name, sub, primary, primaryLabel, gradient }: {
+function RankCard({ rank, initials, name, sub, primary, primaryLabel, gradient, isHot, isDim, onMouseEnter, onMouseLeave }: {
   rank: number; initials: string; name: string; sub: string;
   primary: number; primaryLabel: string; gradient: string;
+  isHot?: boolean; isDim?: boolean;
+  onMouseEnter?: () => void; onMouseLeave?: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
+    <div
+      className="flex items-center gap-3 p-3 rounded-lg"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      style={{
+        background:  'var(--bg)',
+        transform:   isHot ? 'scale(1.025)' : 'scale(1)',
+        opacity:     isDim ? 0.38 : 1,
+        boxShadow:   isHot ? '0 4px 18px rgba(0,0,0,0.12)' : 'none',
+        transition:  'transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease',
+        cursor:      'default',
+      }}
+    >
       <div className="text-base font-black w-5 text-center flex-shrink-0"
            style={{ color: RANK_COLORS[rank] ?? 'var(--text-light)' }}>
         {rank + 1}
@@ -393,7 +460,9 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
   topPerforming:  TopPerformingEntry[] | null;
   mostPopular:    MostPopularEntry[]   | null;
 }) {
-  const [graphType, setGraphType] = useState<GraphType>('bar');
+  const [graphType,  setGraphType]  = useState<GraphType>('bar');
+  const [hoveredTop, setHoveredTop] = useState<number | null>(null);
+  const [hoveredPop, setHoveredPop] = useState<number | null>(null);
 
   return (
     <div className="space-y-4">
@@ -457,6 +526,10 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
                       sub={`${p.likes.toLocaleString()} likes`}
                       primary={p.stars} primaryLabel="stars"
                       gradient={gradient}
+                      isHot={hoveredTop === i}
+                      isDim={hoveredTop !== null && hoveredTop !== i}
+                      onMouseEnter={() => setHoveredTop(i)}
+                      onMouseLeave={() => setHoveredTop(null)}
                     />
                   ))}
                 </div>
@@ -480,6 +553,10 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
                       sub="unique profile visits"
                       primary={p.views} primaryLabel="views"
                       gradient={gradient}
+                      isHot={hoveredPop === i}
+                      isDim={hoveredPop !== null && hoveredPop !== i}
+                      onMouseEnter={() => setHoveredPop(i)}
+                      onMouseLeave={() => setHoveredPop(null)}
                     />
                   ))}
                 </div>
@@ -500,6 +577,8 @@ function ConstellationTab({
   mostPopular:   ConstellationPopularEntry[] | null;
 }) {
   const gradient = `linear-gradient(135deg, ${ACCENT}, ${GOLD})`;
+  const [hoveredTop, setHoveredTop] = useState<number | null>(null);
+  const [hoveredPop, setHoveredPop] = useState<number | null>(null);
 
   return (
     <div className="space-y-4">
@@ -518,7 +597,9 @@ function ConstellationTab({
                   {topPerforming.map((c, i) => (
                     <RankCard key={c.id} rank={i} initials={c.initials} name={c.name}
                       sub={`${c.member_count} member${c.member_count === 1 ? '' : 's'}`}
-                      primary={c.stars} primaryLabel="stars" gradient={gradient} />
+                      primary={c.stars} primaryLabel="stars" gradient={gradient}
+                      isHot={hoveredTop === i} isDim={hoveredTop !== null && hoveredTop !== i}
+                      onMouseEnter={() => setHoveredTop(i)} onMouseLeave={() => setHoveredTop(null)} />
                   ))}
                 </div>
           }
@@ -537,7 +618,9 @@ function ConstellationTab({
                   {mostPopular.map((c, i) => (
                     <RankCard key={c.id} rank={i} initials={c.initials} name={c.name}
                       sub={`${c.member_count} member${c.member_count === 1 ? '' : 's'}`}
-                      primary={c.views} primaryLabel="views" gradient={gradient} />
+                      primary={c.views} primaryLabel="views" gradient={gradient}
+                      isHot={hoveredPop === i} isDim={hoveredPop !== null && hoveredPop !== i}
+                      onMouseEnter={() => setHoveredPop(i)} onMouseLeave={() => setHoveredPop(null)} />
                   ))}
                 </div>
           }
@@ -559,6 +642,8 @@ function TypeOverview({
   ethnicityDist?: DistBucket[]       | null;
 }) {
   const [hoveredEthnicity, setHoveredEthnicity] = useState<string | null>(null);
+  const [hoveredDisliked,  setHoveredDisliked]  = useState<number | null>(null);
+  const [hoveredReported,  setHoveredReported]  = useState<number | null>(null);
 
   return (
     <div className="space-y-4">
@@ -575,21 +660,35 @@ function TypeOverview({
             : disliked.length === 0
               ? <p className="text-xs text-center py-4" style={{ color: 'var(--text-light)' }}>No data yet</p>
               : <div className="space-y-2">
-                  {disliked.map((p, i) => (
-                    <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
-                      <div className="text-base font-black w-5 text-center flex-shrink-0"
-                           style={{ color: RANK_COLORS[i] ?? 'var(--text-light)' }}>
-                        {i + 1}
+                  {disliked.map((p, i) => {
+                    const isHot = hoveredDisliked === i;
+                    const isDim = hoveredDisliked !== null && !isHot;
+                    return (
+                      <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg"
+                           onMouseEnter={() => setHoveredDisliked(i)}
+                           onMouseLeave={() => setHoveredDisliked(null)}
+                           style={{
+                             background:  'var(--bg)',
+                             transform:   isHot ? 'scale(1.025)' : 'scale(1)',
+                             opacity:     isDim ? 0.38 : 1,
+                             boxShadow:   isHot ? '0 4px 18px rgba(0,0,0,0.12)' : 'none',
+                             transition:  'transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease',
+                             cursor:      'default',
+                           }}>
+                        <div className="text-base font-black w-5 text-center flex-shrink-0"
+                             style={{ color: RANK_COLORS[i] ?? 'var(--text-light)' }}>
+                          {i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{p.name}</div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-sm font-bold" style={{ color: '#f44336' }}>{p.passes.toLocaleString()}</div>
+                          <div className="text-xs" style={{ color: 'var(--text-light)' }}>passes</div>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{p.name}</div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className="text-sm font-bold" style={{ color: '#f44336' }}>{p.passes.toLocaleString()}</div>
-                        <div className="text-xs" style={{ color: 'var(--text-light)' }}>passes</div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
           }
         </div>
@@ -606,11 +705,23 @@ function TypeOverview({
             : reported.length === 0
               ? <p className="text-xs text-center py-4" style={{ color: 'var(--text-light)' }}>No data yet</p>
               : <div className="space-y-2">
-                  {reported.map(p => {
+                  {reported.map((p, i) => {
                     const sevBg  = p.severity === 'high' ? 'rgba(244,67,54,0.1)' : p.severity === 'medium' ? 'rgba(255,152,0,0.1)' : 'rgba(76,175,80,0.1)';
                     const sevClr = p.severity === 'high' ? '#f44336'             : p.severity === 'medium' ? '#ff9800'             : '#4caf50';
+                    const isHot  = hoveredReported === i;
+                    const isDim  = hoveredReported !== null && !isHot;
                     return (
-                      <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
+                      <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg"
+                           onMouseEnter={() => setHoveredReported(i)}
+                           onMouseLeave={() => setHoveredReported(null)}
+                           style={{
+                             background:  'var(--bg)',
+                             transform:   isHot ? 'scale(1.025)' : 'scale(1)',
+                             opacity:     isDim ? 0.38 : 1,
+                             boxShadow:   isHot ? '0 4px 18px rgba(0,0,0,0.12)' : 'none',
+                             transition:  'transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease',
+                             cursor:      'default',
+                           }}>
                         <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
                              style={{ background: 'rgba(244,67,54,0.12)' }}>
                           <AlertTriangle size={13} style={{ color: '#f44336' }} />
