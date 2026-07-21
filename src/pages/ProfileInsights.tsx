@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  UserCheck, Heart, Network, Camera, MessageCircle,
+  Camera, MessageCircle,
   Shield, TrendingUp, Star, MapPin, Users, FileText,
   ChevronDown, Loader,
 } from 'lucide-react';
@@ -12,10 +12,10 @@ const GOLD   = '#c8972b';
 
 type Tab = 'patriarchs' | 'muses' | 'constellations';
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'patriarchs',     label: 'Patriarchs',    icon: <UserCheck size={14} /> },
-  { id: 'muses',          label: 'Muses',          icon: <Heart     size={14} /> },
-  { id: 'constellations', label: 'Constellations', icon: <Network   size={14} /> },
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'patriarchs',     label: 'Patriarchs'    },
+  { id: 'muses',          label: 'Muses'          },
+  { id: 'constellations', label: 'Constellations' },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -250,8 +250,9 @@ function HealthGauge({ score }: { score: number }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ProfileInsights() {
-  const [tab, setTab]           = useState<Tab>('patriarchs');
-  const [insights, setInsights] = useState<ProfileInsightsData | null>(null);
+  const [tab, setTab]               = useState<Tab>('patriarchs');
+  const [hoveredTab, setHoveredTab] = useState<Tab | null>(null);
+  const [insights, setInsights]     = useState<ProfileInsightsData | null>(null);
 
   useEffect(() => {
     api.analytics.insights().then(setInsights).catch(() => {});
@@ -272,23 +273,40 @@ export default function ProfileInsights() {
   return (
     <div className="space-y-5">
 
-      {/* Pill nav */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Tab nav */}
+      <div className="flex gap-7">
         {TABS.map(t => {
-          const active = tab === t.id;
+          const active  = tab === t.id;
+          const isHover = hoveredTab === t.id;
           return (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+              onMouseEnter={() => setHoveredTab(t.id)}
+              onMouseLeave={() => setHoveredTab(null)}
+              className="relative pb-3 text-sm font-semibold"
               style={{
-                background: active ? ACCENT : 'var(--card)',
-                color:      active ? '#fff' : 'var(--text-secondary)',
-                border: `1px solid ${active ? ACCENT : 'var(--border)'}`,
+                background: 'none',
+                border:     'none',
+                cursor:     'pointer',
+                color:      active ? ACCENT : isHover ? 'var(--text)' : 'var(--text-secondary)',
+                transition: 'color 0.18s ease',
               }}
             >
-              {t.icon}
               {t.label}
+              <span style={{
+                position:        'absolute',
+                bottom:          -1,
+                left:            0,
+                right:           0,
+                height:          2,
+                background:      ACCENT,
+                borderRadius:    1,
+                transform:       active || isHover ? 'scaleX(1)' : 'scaleX(0)',
+                opacity:         active ? 1 : 0.35,
+                transition:      'transform 0.2s ease, opacity 0.2s ease',
+                transformOrigin: 'left',
+              }} />
             </button>
           );
         })}
