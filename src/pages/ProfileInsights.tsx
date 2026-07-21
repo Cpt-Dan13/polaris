@@ -123,6 +123,7 @@ const correlations: {
 const STAGE_COLORS = [ACCENT, '#ff6b35', GOLD, '#4caf50', '#2196f3'];
 
 function FunnelChart({ stages }: { stages: FunnelStage[] }) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const max = stages[0].count;
 
   return (
@@ -133,10 +134,17 @@ function FunnelChart({ stages }: { stages: FunnelStage[] }) {
         const dropPct = i > 0
           ? (((stages[i - 1].count - stage.count) / stages[i - 1].count) * 100).toFixed(1)
           : null;
-        const color = STAGE_COLORS[i];
+        const color   = STAGE_COLORS[i];
+        const hovered = hoveredIdx === i;
+        const dimmed  = hoveredIdx !== null && !hovered;
 
         return (
-          <div key={stage.label}>
+          <div
+            key={stage.label}
+            onMouseEnter={() => setHoveredIdx(i)}
+            onMouseLeave={() => setHoveredIdx(null)}
+            style={{ transition: 'opacity 200ms ease', opacity: dimmed ? 0.45 : 1 }}
+          >
             {dropPct !== null && (
               <div className="flex items-center gap-1.5 py-1" style={{ paddingLeft: 128 }}>
                 <ChevronDown size={11} style={{ color: 'var(--text-light)' }} />
@@ -152,10 +160,19 @@ function FunnelChart({ stages }: { stages: FunnelStage[] }) {
               >
                 {stage.label}
               </span>
-              <div className="flex-1 h-10 rounded-lg overflow-hidden" style={{ background: 'var(--bg)' }}>
+              <div
+                className="flex-1 rounded-lg overflow-hidden"
+                style={{ background: 'var(--bg)', height: hovered ? 44 : 40, transition: 'height 200ms ease' }}
+              >
                 <div
-                  className="h-full rounded-lg flex items-center px-3 transition-all duration-700"
-                  style={{ width: `${pct}%`, background: color, minWidth: 52 }}
+                  className="h-full rounded-lg flex items-center px-3"
+                  style={{
+                    width: `${pct}%`,
+                    background: color,
+                    minWidth: 52,
+                    transition: 'width 700ms ease, filter 200ms ease',
+                    filter: hovered ? 'brightness(1.2)' : 'brightness(1)',
+                  }}
                 >
                   <span className="text-white font-bold" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
                     {stage.count.toLocaleString()}
@@ -184,7 +201,8 @@ function FunnelChart({ stages }: { stages: FunnelStage[] }) {
 
 // ─── Health Gauge ─────────────────────────────────────────────────────────────
 
-function HealthGauge({ score }: { score: number }) {
+function HealthGauge({ score: rawScore }: { score: number }) {
+  const score = Math.min(100, Math.max(0, rawScore));
   const cx = 60, cy = 60, r = 44;
   const startDeg = 135, sweep = 270;
 
@@ -306,7 +324,7 @@ export default function ProfileInsights() {
       </div>
 
       {/* Conversion Funnel */}
-      <div className="card p-5">
+      <div className="card card-static p-5">
         <div className="flex items-start justify-between mb-5">
           <div>
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>

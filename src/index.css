@@ -49,6 +49,11 @@ body {
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
 }
 
+.card-static:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 .sidebar {
   background-color: var(--sidebar-bg);
   transition: background-color 0.3s;
