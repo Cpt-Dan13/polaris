@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   UserCheck, Heart, Network, Camera, MessageCircle,
   Shield, TrendingUp, Star, MapPin, Users, FileText,
-  ChevronDown,
+  ChevronDown, Loader,
 } from 'lucide-react';
+import { api } from '../lib/api';
+import type { ProfileInsightsData, ProfileInsightsFunnel } from '../lib/api';
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
@@ -18,7 +20,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type FunnelStage  = { label: string; count: number };
+type FunnelStage  = ProfileInsightsFunnel;
 type HealthSignal = { label: string; score: number; detail: string };
 type ImpactLevel  = 'high' | 'medium' | 'low';
 
@@ -248,10 +250,24 @@ function HealthGauge({ score }: { score: number }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ProfileInsights() {
-  const [tab, setTab] = useState<Tab>('patriarchs');
-  const funnel   = funnelData[tab];
+  const [tab, setTab]           = useState<Tab>('patriarchs');
+  const [insights, setInsights] = useState<ProfileInsightsData | null>(null);
+
+  useEffect(() => {
+    api.analytics.insights().then(setInsights).catch(() => {});
+  }, []);
+
+  const liveFunnel: Record<Tab, FunnelStage[] | null> = {
+    patriarchs:     insights?.patriarch.funnel     ?? null,
+    muses:          insights?.muse.funnel          ?? null,
+    constellations: insights?.constellation.funnel ?? null,
+  };
+
+  const funnel   = liveFunnel[tab] ?? funnelData[tab];
   const health   = healthData[tab];
-  const endToEnd = ((funnel[funnel.length - 1].count / funnel[0].count) * 100).toFixed(1);
+  const endToEnd = funnel[0].count > 0
+    ? ((funnel[funnel.length - 1].count / funnel[0].count) * 100).toFixed(1)
+    : '0.0';
 
   return (
     <div className="space-y-5">
@@ -286,15 +302,25 @@ export default function ProfileInsights() {
               Conversion Funnel
             </h3>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-light)' }}>
-              View → active conversation · last 30 days
+              View → active conversation · all time
             </p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-black" style={{ color: ACCENT }}>{endToEnd}%</div>
-            <div className="text-xs" style={{ color: 'var(--text-light)' }}>end-to-end</div>
+            {insights === null
+              ? <Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} />
+              : <>
+                  <div className="text-2xl font-black" style={{ color: ACCENT }}>{endToEnd}%</div>
+                  <div className="text-xs" style={{ color: 'var(--text-light)' }}>end-to-end</div>
+                </>
+            }
           </div>
         </div>
-        <FunnelChart stages={funnel} />
+        {insights === null
+          ? <div className="flex justify-center py-10">
+              <Loader size={22} className="animate-spin" style={{ color: 'var(--text-light)' }} />
+            </div>
+          : <FunnelChart stages={funnel} />
+        }
       </div>
 
       {/* Profile Health */}

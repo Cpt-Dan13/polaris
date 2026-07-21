@@ -38,6 +38,7 @@ export const api = {
     swipes:            (period: 'week' | 'month' | 'year' = 'week') =>
       request<SwipeAnalyticsData>(`/analytics/swipes?period=${period}`),
     profiles:          () => request<ProfileAnalyticsData>('/analytics/profiles'),
+    insights:          () => request<ProfileInsightsData>('/analytics/insights'),
   },
 
   moderation: {
@@ -117,6 +118,13 @@ export interface ProfileAnalyticsData {
     most_reported:  ConstellationReportedEntry[]
     most_disliked:  ConstellationDislikedEntry[]
   }
+}
+
+export interface ProfileInsightsFunnel { label: string; count: number }
+export interface ProfileInsightsData {
+  patriarch:     { funnel: ProfileInsightsFunnel[] }
+  muse:          { funnel: ProfileInsightsFunnel[] }
+  constellation: { funnel: ProfileInsightsFunnel[] }
 }
 
 export interface SwipeAnalyticsData {
