@@ -85,6 +85,8 @@ export interface MostDislikedEntry          { id: string; name: string; initials
 export interface MostReportedEntry          { id: string; name: string; initials: string; photo_url: string | null; reports: number; blocks: number; severity: 'high' | 'medium' | 'low' }
 export interface ConstellationTopEntry      { id: string; name: string; initials: string; member_count: number; stars: number; likes: number }
 export interface ConstellationPopularEntry  { id: string; name: string; initials: string; member_count: number; views: number }
+export interface ConstellationReportedEntry { id: string; name: string; initials: string; member_count: number; reports: number; blocks: number; severity: 'high' | 'medium' | 'low'; photo_url: null }
+export interface ConstellationDislikedEntry { id: string; name: string; initials: string; member_count: number; passes: number; photo_url: null }
 
 export interface ProfileAnalyticsData {
   patriarch: {
@@ -112,6 +114,8 @@ export interface ProfileAnalyticsData {
   constellation: {
     top_performing: ConstellationTopEntry[]
     most_popular:   ConstellationPopularEntry[]
+    most_reported:  ConstellationReportedEntry[]
+    most_disliked:  ConstellationDislikedEntry[]
   }
 }
 

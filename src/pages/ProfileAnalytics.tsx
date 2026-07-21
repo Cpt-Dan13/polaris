@@ -4,7 +4,7 @@ import {
   SlidersHorizontal, Loader,
 } from 'lucide-react';
 import { api } from '../lib/api';
-import type { ProfileAnalyticsData, DistBucket, TopPerformingEntry, MostPopularEntry, MostDislikedEntry, MostReportedEntry, ConstellationTopEntry, ConstellationPopularEntry } from '../lib/api';
+import type { ProfileAnalyticsData, DistBucket, TopPerformingEntry, MostPopularEntry, MostDislikedEntry, MostReportedEntry, ConstellationTopEntry, ConstellationPopularEntry, ConstellationReportedEntry, ConstellationDislikedEntry } from '../lib/api';
 
 function cmToFt(cm: number | null): string {
   if (!cm) return '—';
@@ -578,13 +578,19 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
 function ConstellationTab({
   topPerforming,
   mostPopular,
+  mostReported,
+  mostDisliked,
 }: {
-  topPerforming: ConstellationTopEntry[]   | null;
-  mostPopular:   ConstellationPopularEntry[] | null;
+  topPerforming: ConstellationTopEntry[]      | null;
+  mostPopular:   ConstellationPopularEntry[]  | null;
+  mostReported:  ConstellationReportedEntry[] | null;
+  mostDisliked:  ConstellationDislikedEntry[] | null;
 }) {
   const gradient = `linear-gradient(135deg, ${ACCENT}, ${GOLD})`;
-  const [hoveredTop, setHoveredTop] = useState<number | null>(null);
-  const [hoveredPop, setHoveredPop] = useState<number | null>(null);
+  const [hoveredTop,      setHoveredTop]      = useState<number | null>(null);
+  const [hoveredPop,      setHoveredPop]      = useState<number | null>(null);
+  const [hoveredDisliked, setHoveredDisliked] = useState<number | null>(null);
+  const [hoveredReported, setHoveredReported] = useState<number | null>(null);
 
   return (
     <div className="space-y-4">
@@ -628,6 +634,110 @@ function ConstellationTab({
                       isHot={hoveredPop === i} isDim={hoveredPop !== null && hoveredPop !== i}
                       onMouseEnter={() => setHoveredPop(i)} onMouseLeave={() => setHoveredPop(null)} />
                   ))}
+                </div>
+          }
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Most Disliked */}
+        <div className="card p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <ThumbsDown size={15} style={{ color: '#ff9800' }} />
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Most Disliked</h3>
+            <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>by passes received</span>
+          </div>
+          {mostDisliked === null
+            ? <div className="flex justify-center py-6"><Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} /></div>
+            : mostDisliked.length === 0
+              ? <p className="text-xs text-center py-4" style={{ color: 'var(--text-light)' }}>No data yet</p>
+              : <div className="space-y-2">
+                  {mostDisliked.map((c, i) => {
+                    const isHot = hoveredDisliked === i;
+                    const isDim = hoveredDisliked !== null && !isHot;
+                    return (
+                      <div key={c.id} className="flex items-center gap-3 p-3 rounded-lg"
+                           onMouseEnter={() => setHoveredDisliked(i)}
+                           onMouseLeave={() => setHoveredDisliked(null)}
+                           style={{
+                             background:  'var(--bg)',
+                             transform:   isHot ? 'scale(1.025)' : 'scale(1)',
+                             opacity:     isDim ? 0.38 : 1,
+                             boxShadow:   isHot ? '0 4px 18px rgba(0,0,0,0.12)' : 'none',
+                             transition:  'transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease',
+                             cursor:      'default',
+                           }}>
+                        <div className="text-base font-black w-5 text-center flex-shrink-0"
+                             style={{ color: RANK_COLORS[i] ?? 'var(--text-light)' }}>
+                          {i + 1}
+                        </div>
+                        <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
+                             style={{ background: 'rgba(255,152,0,0.15)' }}>
+                          <span className="text-xs font-bold" style={{ color: '#ff9800' }}>{c.initials}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{c.name}</div>
+                          <div className="text-xs mt-0.5" style={{ color: 'var(--text-light)' }}>
+                            {c.member_count} member{c.member_count === 1 ? '' : 's'}
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-sm font-bold" style={{ color: '#f44336' }}>{c.passes.toLocaleString()}</div>
+                          <div className="text-xs" style={{ color: 'var(--text-light)' }}>passes</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+          }
+        </div>
+
+        {/* Most Reported */}
+        <div className="card p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle size={15} style={{ color: '#f44336' }} />
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Most Reported</h3>
+            <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>pending review</span>
+          </div>
+          {mostReported === null
+            ? <div className="flex justify-center py-6"><Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} /></div>
+            : mostReported.length === 0
+              ? <p className="text-xs text-center py-4" style={{ color: 'var(--text-light)' }}>No data yet</p>
+              : <div className="space-y-2">
+                  {mostReported.map((c, i) => {
+                    const sevBg  = c.severity === 'high' ? 'rgba(244,67,54,0.1)' : c.severity === 'medium' ? 'rgba(255,152,0,0.1)' : 'rgba(76,175,80,0.1)';
+                    const sevClr = c.severity === 'high' ? '#f44336'             : c.severity === 'medium' ? '#ff9800'             : '#4caf50';
+                    const isHot  = hoveredReported === i;
+                    const isDim  = hoveredReported !== null && !isHot;
+                    return (
+                      <div key={c.id} className="flex items-center gap-3 p-3 rounded-lg"
+                           onMouseEnter={() => setHoveredReported(i)}
+                           onMouseLeave={() => setHoveredReported(null)}
+                           style={{
+                             background:  'var(--bg)',
+                             transform:   isHot ? 'scale(1.025)' : 'scale(1)',
+                             opacity:     isDim ? 0.38 : 1,
+                             boxShadow:   isHot ? '0 4px 18px rgba(0,0,0,0.12)' : 'none',
+                             transition:  'transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease',
+                             cursor:      'default',
+                           }}>
+                        <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
+                             style={{ background: 'rgba(244,67,54,0.12)' }}>
+                          <span className="text-xs font-bold" style={{ color: '#f44336' }}>{c.initials}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{c.name}</div>
+                          <div className="text-xs mt-0.5" style={{ color: 'var(--text-light)' }}>
+                            {c.reports} reports · {c.blocks} blocks
+                          </div>
+                        </div>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold capitalize flex-shrink-0"
+                              style={{ background: sevBg, color: sevClr }}>
+                          {c.severity}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
           }
         </div>
@@ -924,13 +1034,12 @@ export default function ProfileAnalytics() {
         </>
       )}
       {tab === 'constellations' && (
-        <>
-          <ConstellationTab
-            topPerforming={profileStats?.constellation.top_performing ?? null}
-            mostPopular={profileStats?.constellation.most_popular     ?? null}
-          />
-          <TypeOverview disliked={null} reported={null} />
-        </>
+        <ConstellationTab
+          topPerforming={profileStats?.constellation.top_performing ?? null}
+          mostPopular={profileStats?.constellation.most_popular     ?? null}
+          mostReported={profileStats?.constellation.most_reported   ?? null}
+          mostDisliked={profileStats?.constellation.most_disliked   ?? null}
+        />
       )}
     </div>
   );
