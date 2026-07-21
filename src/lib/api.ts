@@ -129,6 +129,7 @@ export interface ProfileInsightsData {
 }
 
 export interface CorrelationLifts {
+  prompt_answers:    number | null
   bio_length:        number | null
   premium:           number | null
   religion_politics: number | null

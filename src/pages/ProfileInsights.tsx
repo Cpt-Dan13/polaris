@@ -102,9 +102,9 @@ const correlations: {
     detail: 'Verification badge increases user trust and drives higher engagement from matched users.',
   },
   {
-    key: null, icon: MessageSquare, label: 'Prompt Answers Filled',
-    mockStat: '+38%', statLabel: 'more likes', impact: 'high', mock: true,
-    detail: 'Profiles with completed prompt answers receive significantly more likes — personality drives engagement beyond photos alone.',
+    key: 'prompt_answers', icon: MessageSquare, label: 'Detailed Prompt Answers',
+    mockStat: '+38%', statLabel: 'more likes', impact: 'high',
+    detail: 'Profiles averaging 60%+ of the 250-char prompt limit get significantly more likes than those giving minimal answers.',
   },
   {
     key: 'bio_length', icon: FileText, label: 'Bio Over 80 Characters',
