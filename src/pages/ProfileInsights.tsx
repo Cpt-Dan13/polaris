@@ -102,8 +102,8 @@ const correlations: {
     detail: 'Verification badge increases user trust and drives higher engagement from matched users.',
   },
   {
-    key: 'prompt_answers', icon: MessageSquare, label: 'Prompt Answers Filled',
-    mockStat: '+38%', statLabel: 'more likes', impact: 'high',
+    key: null, icon: MessageSquare, label: 'Prompt Answers Filled',
+    mockStat: '+38%', statLabel: 'more likes', impact: 'high', mock: true,
     detail: 'Profiles with completed prompt answers receive significantly more likes — personality drives engagement beyond photos alone.',
   },
   {
@@ -274,7 +274,8 @@ export default function ProfileInsights() {
 
   function formatLift(lift: number): string {
     if (lift >= 2) return `${lift.toFixed(1)}×`;
-    return `+${Math.round((lift - 1) * 100)}%`;
+    const pct = Math.round((lift - 1) * 100);
+    return pct >= 0 ? `+${pct}%` : `${pct}%`;
   }
 
   const liveFunnel: Record<Tab, FunnelStage[] | null> = {
@@ -429,7 +430,7 @@ export default function ProfileInsights() {
                     >
                       {imp.label}
                     </span>
-                    {(c.mock || (!isLive && lifts !== null)) && (
+                    {c.mock && (
                       <span className="text-xs px-1.5 py-0.5 rounded font-medium"
                             style={{ background: 'var(--bg)', color: 'var(--text-light)', fontSize: 9 }}>
                         mock
