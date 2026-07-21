@@ -610,6 +610,7 @@ function ConstellationTab({
                     <RankCard key={c.id} rank={i} initials={c.initials} name={c.name}
                       sub={`${c.member_count} member${c.member_count === 1 ? '' : 's'}`}
                       primary={c.stars} primaryLabel="stars" gradient={gradient}
+                      photoUrl={c.photo_url}
                       isHot={hoveredTop === i} isDim={hoveredTop !== null && hoveredTop !== i}
                       onMouseEnter={() => setHoveredTop(i)} onMouseLeave={() => setHoveredTop(null)} />
                   ))}
@@ -631,6 +632,7 @@ function ConstellationTab({
                     <RankCard key={c.id} rank={i} initials={c.initials} name={c.name}
                       sub={`${c.member_count} member${c.member_count === 1 ? '' : 's'}`}
                       primary={c.views} primaryLabel="views" gradient={gradient}
+                      photoUrl={c.photo_url}
                       isHot={hoveredPop === i} isDim={hoveredPop !== null && hoveredPop !== i}
                       onMouseEnter={() => setHoveredPop(i)} onMouseLeave={() => setHoveredPop(null)} />
                   ))}
@@ -671,9 +673,13 @@ function ConstellationTab({
                              style={{ color: RANK_COLORS[i] ?? 'var(--text-light)' }}>
                           {i + 1}
                         </div>
-                        <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
+                        <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden"
                              style={{ background: 'rgba(255,152,0,0.15)' }}>
-                          <span className="text-xs font-bold" style={{ color: '#ff9800' }}>{c.initials}</span>
+                          {c.photo_url
+                            ? <img src={c.photo_url} alt={c.name} className="w-full h-full object-cover" />
+                            : <span className="w-full h-full flex items-center justify-center text-xs font-bold"
+                                    style={{ color: '#ff9800' }}>{c.initials}</span>
+                          }
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{c.name}</div>
@@ -721,9 +727,13 @@ function ConstellationTab({
                              transition:  'transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease',
                              cursor:      'default',
                            }}>
-                        <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
+                        <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden"
                              style={{ background: 'rgba(244,67,54,0.12)' }}>
-                          <span className="text-xs font-bold" style={{ color: '#f44336' }}>{c.initials}</span>
+                          {c.photo_url
+                            ? <img src={c.photo_url} alt={c.name} className="w-full h-full object-cover" />
+                            : <span className="w-full h-full flex items-center justify-center text-xs font-bold"
+                                    style={{ color: '#f44336' }}>{c.initials}</span>
+                          }
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{c.name}</div>

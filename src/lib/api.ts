@@ -83,10 +83,10 @@ export interface TopPerformingEntry         { id: string; name: string; initials
 export interface MostPopularEntry           { id: string; name: string; initials: string; photo_url: string | null; views: number }
 export interface MostDislikedEntry          { id: string; name: string; initials: string; photo_url: string | null; passes: number }
 export interface MostReportedEntry          { id: string; name: string; initials: string; photo_url: string | null; reports: number; blocks: number; severity: 'high' | 'medium' | 'low' }
-export interface ConstellationTopEntry      { id: string; name: string; initials: string; member_count: number; stars: number; likes: number }
-export interface ConstellationPopularEntry  { id: string; name: string; initials: string; member_count: number; views: number }
-export interface ConstellationReportedEntry { id: string; name: string; initials: string; member_count: number; reports: number; blocks: number; severity: 'high' | 'medium' | 'low'; photo_url: null }
-export interface ConstellationDislikedEntry { id: string; name: string; initials: string; member_count: number; passes: number; photo_url: null }
+export interface ConstellationTopEntry      { id: string; name: string; initials: string; photo_url: string | null; member_count: number; stars: number; likes: number }
+export interface ConstellationPopularEntry  { id: string; name: string; initials: string; photo_url: string | null; member_count: number; views: number }
+export interface ConstellationReportedEntry { id: string; name: string; initials: string; photo_url: string | null; member_count: number; reports: number; blocks: number; severity: 'high' | 'medium' | 'low' }
+export interface ConstellationDislikedEntry { id: string; name: string; initials: string; photo_url: string | null; member_count: number; passes: number }
 
 export interface ProfileAnalyticsData {
   patriarch: {
