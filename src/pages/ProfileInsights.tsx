@@ -5,7 +5,7 @@ import {
   Ruler, Baby, MessageSquare,
 } from 'lucide-react';
 import { api } from '../lib/api';
-import type { ProfileInsightsData, ProfileInsightsFunnel, CorrelationLifts } from '../lib/api';
+import type { ProfileInsightsData, ProfileInsightsFunnel, CorrelationLifts, ProfileHealthData, HealthSignal } from '../lib/api';
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
@@ -20,9 +20,8 @@ const TABS: { id: Tab; label: string }[] = [
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type FunnelStage  = ProfileInsightsFunnel;
-type HealthSignal = { label: string; score: number; detail: string };
-type ImpactLevel  = 'high' | 'medium' | 'low';
+type FunnelStage = ProfileInsightsFunnel;
+type ImpactLevel = 'high' | 'medium' | 'low';
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -50,35 +49,6 @@ const funnelData: Record<Tab, FunnelStage[]> = {
   ],
 };
 
-const healthData: Record<Tab, { overall: number; signals: HealthSignal[] }> = {
-  patriarchs: {
-    overall: 71,
-    signals: [
-      { label: 'Photo Coverage',   score: 68, detail: 'avg 2.4 photos per profile' },
-      { label: 'Bio Completeness', score: 74, detail: '74% have a filled bio' },
-      { label: 'Response Rate',    score: 82, detail: 'avg 82% message reply rate' },
-      { label: 'Match Quality',    score: 61, detail: '61% of matches start a conversation' },
-    ],
-  },
-  muses: {
-    overall: 84,
-    signals: [
-      { label: 'Photo Coverage',   score: 89, detail: 'avg 3.8 photos per profile' },
-      { label: 'Bio Completeness', score: 81, detail: '81% have a filled bio' },
-      { label: 'Response Rate',    score: 91, detail: 'avg 91% message reply rate' },
-      { label: 'Match Quality',    score: 77, detail: '77% of matches start a conversation' },
-    ],
-  },
-  constellations: {
-    overall: 63,
-    signals: [
-      { label: 'Photo Coverage',   score: 72, detail: 'avg 2.1 photos per member' },
-      { label: 'Bio Completeness', score: 58, detail: '58% have a group bio' },
-      { label: 'Response Rate',    score: 69, detail: 'avg 69% message reply rate' },
-      { label: 'Match Quality',    score: 54, detail: '54% of matches start a conversation' },
-    ],
-  },
-};
 
 const IMPACT_STYLES: Record<ImpactLevel, { bg: string; color: string; label: string }> = {
   high:   { bg: 'rgba(244,67,54,0.12)',  color: '#f44336', label: 'High Impact'   },
@@ -264,11 +234,13 @@ function HealthGauge({ score }: { score: number }) {
 export default function ProfileInsights() {
   const [tab, setTab]               = useState<Tab>('patriarchs');
   const [hoveredTab, setHoveredTab] = useState<Tab | null>(null);
-  const [insights, setInsights]     = useState<ProfileInsightsData | null>(null);
-  const [lifts, setLifts]           = useState<CorrelationLifts | null>(null);
+  const [insights, setInsights] = useState<ProfileInsightsData | null>(null);
+  const [health, setHealth]     = useState<ProfileHealthData | null>(null);
+  const [lifts, setLifts]       = useState<CorrelationLifts | null>(null);
 
   useEffect(() => {
     api.analytics.insights().then(setInsights).catch(() => {});
+    api.analytics.health().then(setHealth).catch(() => {});
     api.analytics.correlations().then(setLifts).catch(() => {});
   }, []);
 
@@ -284,8 +256,9 @@ export default function ProfileInsights() {
     constellations: insights?.constellation.funnel ?? null,
   };
 
-  const funnel   = liveFunnel[tab] ?? funnelData[tab];
-  const health   = healthData[tab];
+  const funnel      = liveFunnel[tab] ?? funnelData[tab];
+  const healthKey   = tab === 'patriarchs' ? 'patriarch' : tab === 'muses' ? 'muse' : 'constellation';
+  const liveHealth  = health?.[healthKey] ?? null;
   const endToEnd = funnel[0].count > 0
     ? ((funnel[funnel.length - 1].count / funnel[0].count) * 100).toFixed(1)
     : '0.0';
@@ -366,12 +339,17 @@ export default function ProfileInsights() {
         <h3 className="text-sm font-semibold mb-5" style={{ color: 'var(--text)' }}>
           Profile Health Score
         </h3>
+        {!liveHealth ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader size={20} className="animate-spin" style={{ color: 'var(--text-light)' }} />
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-6 items-center">
           <div className="flex justify-center">
-            <HealthGauge score={health.overall} />
+            <HealthGauge score={liveHealth.overall} />
           </div>
           <div className="space-y-4">
-            {health.signals.map(sig => {
+            {liveHealth.signals.map((sig: HealthSignal) => {
               const color = sig.score >= 80 ? '#4caf50' : sig.score >= 65 ? GOLD : ACCENT;
               return (
                 <div key={sig.label}>
@@ -395,6 +373,7 @@ export default function ProfileInsights() {
             })}
           </div>
         </div>
+        )}
       </div>
 
       {/* Attribute Correlations */}

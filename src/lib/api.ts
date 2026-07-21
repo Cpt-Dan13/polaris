@@ -39,6 +39,7 @@ export const api = {
       request<SwipeAnalyticsData>(`/analytics/swipes?period=${period}`),
     profiles:          () => request<ProfileAnalyticsData>('/analytics/profiles'),
     insights:          () => request<ProfileInsightsData>('/analytics/insights'),
+    health:            () => request<ProfileHealthData>('/analytics/insights/health'),
     correlations:      () => request<CorrelationLifts>('/analytics/insights/correlations'),
   },
 
@@ -126,6 +127,13 @@ export interface ProfileInsightsData {
   patriarch:     { funnel: ProfileInsightsFunnel[] }
   muse:          { funnel: ProfileInsightsFunnel[] }
   constellation: { funnel: ProfileInsightsFunnel[] }
+}
+
+export interface HealthSignal { label: string; score: number; detail: string }
+export interface ProfileHealthData {
+  patriarch:     { overall: number; signals: HealthSignal[] }
+  muse:          { overall: number; signals: HealthSignal[] }
+  constellation: { overall: number; signals: HealthSignal[] }
 }
 
 export interface CorrelationLifts {
