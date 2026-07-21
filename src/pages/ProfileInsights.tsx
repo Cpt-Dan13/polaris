@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import {
-  Camera, MessageCircle,
-  Shield, TrendingUp, Star, MapPin, Users, FileText,
-  ChevronDown, Loader,
+  Shield, TrendingUp, Star, FileText,
+  ChevronDown, Loader, Globe, Landmark, Wine,
+  Ruler, Baby, MessageSquare,
 } from 'lucide-react';
 import { api } from '../lib/api';
-import type { ProfileInsightsData, ProfileInsightsFunnel } from '../lib/api';
+import type { ProfileInsightsData, ProfileInsightsFunnel, CorrelationLifts } from '../lib/api';
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
@@ -87,52 +87,64 @@ const IMPACT_STYLES: Record<ImpactLevel, { bg: string; color: string; label: str
 };
 
 const correlations: {
-  icon: React.ElementType;
-  label: string;
-  stat: string;
+  key:       keyof CorrelationLifts | null;
+  icon:      React.ElementType;
+  label:     string;
+  mockStat:  string;
   statLabel: string;
-  impact: ImpactLevel;
-  detail: string;
+  impact:    ImpactLevel;
+  detail:    string;
+  mock?:     boolean;
 }[] = [
   {
-    icon: Camera, label: '3+ Profile Photos',
-    stat: '2.4×', statLabel: 'more matches', impact: 'high',
-    detail: 'Profiles with 3 or more photos receive significantly more likes and matches across all profile types.',
-  },
-  {
-    icon: Shield, label: 'Verified Account',
-    stat: '+34%', statLabel: 'trust score', impact: 'high',
+    key: null, icon: Shield, label: 'Verified Account',
+    mockStat: '+34%', statLabel: 'trust score', impact: 'high', mock: true,
     detail: 'Verification badge increases user trust and drives higher engagement from matched users.',
   },
   {
-    icon: MessageCircle, label: 'Response Under 2 Hrs',
-    stat: '+41%', statLabel: 'retention', impact: 'high',
-    detail: 'Fast responders retain matched conversations at substantially higher rates than slow responders.',
+    key: 'prompt_answers', icon: MessageSquare, label: 'Prompt Answers Filled',
+    mockStat: '+38%', statLabel: 'more likes', impact: 'high',
+    detail: 'Profiles with completed prompt answers receive significantly more likes — personality drives engagement beyond photos alone.',
   },
   {
-    icon: FileText, label: 'Bio Over 80 Characters',
-    stat: '+18%', statLabel: 'conversion rate', impact: 'high',
+    key: 'bio_length', icon: FileText, label: 'Bio Over 80 Characters',
+    mockStat: '+18%', statLabel: 'more likes', impact: 'high',
     detail: 'Profiles with detailed bios convert profile views to likes at a meaningfully higher rate.',
   },
   {
-    icon: Star, label: 'Premium Subscription',
-    stat: '3.1×', statLabel: 'match rate', impact: 'high',
+    key: 'premium', icon: Star, label: 'Premium Subscription',
+    mockStat: '3.1×', statLabel: 'more matches', impact: 'high',
     detail: 'Premium members benefit from visibility boosts and advanced filters, resulting in far higher match rates.',
   },
   {
-    icon: TrendingUp, label: 'Active in Last 30 Days',
-    stat: '1.8×', statLabel: 'more views', impact: 'medium',
+    key: 'religion_politics', icon: Landmark, label: 'Religion & Politics',
+    mockStat: '2.3×', statLabel: 'more matches', impact: 'high',
+    detail: 'Aligned values on religion and politics are the strongest predictors of conversation longevity and mutual intent.',
+  },
+  {
+    key: 'active_30d', icon: TrendingUp, label: 'Active in Last 30 Days',
+    mockStat: '1.8×', statLabel: 'more likes', impact: 'medium',
     detail: 'Recently active profiles rank higher in discovery feeds, driving significantly more profile impressions.',
   },
   {
-    icon: Users, label: 'Constellation 3+ Members',
-    stat: '2.1×', statLabel: 'more likes', impact: 'medium',
-    detail: 'Larger constellation groups signal stability and social proof, attracting more interaction.',
+    key: 'ethnicity', icon: Globe, label: 'Ethnicity Preference',
+    mockStat: '+27%', statLabel: 'more likes', impact: 'medium',
+    detail: 'Profiles that specify ethnicity preferences see higher compatibility alignment and more meaningful matches.',
   },
   {
-    icon: MapPin, label: 'Location Enabled',
-    stat: '+22%', statLabel: 'local views', impact: 'low',
-    detail: 'Enabling location increases visibility to nearby users, but the effect is modest vs. other factors.',
+    key: 'has_children', icon: Baby, label: 'Has Children',
+    mockStat: '+23%', statLabel: 'more matches', impact: 'medium',
+    detail: 'Disclosing children status and preferences reduces mismatch significantly and improves long-term match quality.',
+  },
+  {
+    key: 'vices', icon: Wine, label: 'Vices (Drink, Smoke, Drugs)',
+    mockStat: '+31%', statLabel: 'more matches', impact: 'medium',
+    detail: 'Shared lifestyle habits around drinking, smoking, and drug use significantly reduce early unmatch rates.',
+  },
+  {
+    key: 'height', icon: Ruler, label: 'Height Preference',
+    mockStat: '+19%', statLabel: 'more likes', impact: 'medium',
+    detail: 'Profiles within a matched height preference range receive more likes and are more likely to convert to active matches.',
   },
 ];
 
@@ -253,10 +265,17 @@ export default function ProfileInsights() {
   const [tab, setTab]               = useState<Tab>('patriarchs');
   const [hoveredTab, setHoveredTab] = useState<Tab | null>(null);
   const [insights, setInsights]     = useState<ProfileInsightsData | null>(null);
+  const [lifts, setLifts]           = useState<CorrelationLifts | null>(null);
 
   useEffect(() => {
     api.analytics.insights().then(setInsights).catch(() => {});
+    api.analytics.correlations().then(setLifts).catch(() => {});
   }, []);
+
+  function formatLift(lift: number): string {
+    if (lift >= 2) return `${lift.toFixed(1)}×`;
+    return `+${Math.round((lift - 1) * 100)}%`;
+  }
 
   const liveFunnel: Record<Tab, FunnelStage[] | null> = {
     patriarchs:     insights?.patriarch.funnel     ?? null,
@@ -389,8 +408,11 @@ export default function ProfileInsights() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {correlations.map(c => {
-            const imp  = IMPACT_STYLES[c.impact];
-            const Icon = c.icon;
+            const imp      = IMPACT_STYLES[c.impact];
+            const Icon     = c.icon;
+            const liftVal  = c.key && lifts ? lifts[c.key] : null;
+            const stat     = liftVal != null ? formatLift(liftVal) : c.mockStat;
+            const isLive   = liftVal != null;
             return (
               <div key={c.label} className="card p-4 flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-2">
@@ -400,21 +422,30 @@ export default function ProfileInsights() {
                   >
                     <Icon size={15} style={{ color: ACCENT }} />
                   </div>
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                    style={{ background: imp.bg, color: imp.color }}
-                  >
-                    {imp.label}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                      style={{ background: imp.bg, color: imp.color }}
+                    >
+                      {imp.label}
+                    </span>
+                    {(c.mock || (!isLive && lifts !== null)) && (
+                      <span className="text-xs px-1.5 py-0.5 rounded font-medium"
+                            style={{ background: 'var(--bg)', color: 'var(--text-light)', fontSize: 9 }}>
+                        mock
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs font-semibold mb-1.5" style={{ color: 'var(--text)' }}>
                     {c.label}
                   </div>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-2xl font-black" style={{ color: 'var(--text)' }}>
-                      {c.stat}
-                    </span>
+                    {lifts === null && c.key
+                      ? <Loader size={18} className="animate-spin" style={{ color: 'var(--text-light)' }} />
+                      : <span className="text-2xl font-black" style={{ color: 'var(--text)' }}>{stat}</span>
+                    }
                     <span className="text-xs" style={{ color: 'var(--text-light)' }}>
                       {c.statLabel}
                     </span>

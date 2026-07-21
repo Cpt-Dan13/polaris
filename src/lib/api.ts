@@ -39,6 +39,7 @@ export const api = {
       request<SwipeAnalyticsData>(`/analytics/swipes?period=${period}`),
     profiles:          () => request<ProfileAnalyticsData>('/analytics/profiles'),
     insights:          () => request<ProfileInsightsData>('/analytics/insights'),
+    correlations:      () => request<CorrelationLifts>('/analytics/insights/correlations'),
   },
 
   moderation: {
@@ -125,6 +126,18 @@ export interface ProfileInsightsData {
   patriarch:     { funnel: ProfileInsightsFunnel[] }
   muse:          { funnel: ProfileInsightsFunnel[] }
   constellation: { funnel: ProfileInsightsFunnel[] }
+}
+
+export interface CorrelationLifts {
+  prompt_answers:    number | null
+  bio_length:        number | null
+  premium:           number | null
+  religion_politics: number | null
+  active_30d:        number | null
+  ethnicity:         number | null
+  has_children:      number | null
+  vices:             number | null
+  height:            number | null
 }
 
 export interface SwipeAnalyticsData {
