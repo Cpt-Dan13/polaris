@@ -41,6 +41,7 @@ export const api = {
     insights:          () => request<ProfileInsightsData>('/analytics/insights'),
     health:            () => request<ProfileHealthData>('/analytics/insights/health'),
     correlations:      () => request<CorrelationLifts>('/analytics/insights/correlations'),
+    activeUserKPIs:    () => request<ActiveUserKPIs>('/analytics/active-users/kpis'),
   },
 
   moderation: {
@@ -134,6 +135,14 @@ export interface ProfileHealthData {
   patriarch:     { overall: number; signals: HealthSignal[] }
   muse:          { overall: number; signals: HealthSignal[] }
   constellation: { overall: number; signals: HealthSignal[] }
+}
+
+export interface ActiveUserKPIs {
+  online_now:          number
+  sessions_today:      number
+  avg_session_seconds: number
+  peak_today:          number
+  peak_today_at:       string | null
 }
 
 export interface CorrelationLifts {

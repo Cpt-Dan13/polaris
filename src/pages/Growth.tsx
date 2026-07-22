@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from '../lib/api';
+import type { ActiveUserKPIs } from '../lib/api';
 import {
   Users, TrendingUp, Activity, UserMinus, MapPin,
   Clock, Zap, UserCheck, Heart, Network,
@@ -52,14 +54,18 @@ function fmt(n: number): string {
   return String(n);
 }
 
-// ─── Active Users mock data ───────────────────────────────────────────────────
+function fmtDuration(seconds: number): string {
+  if (seconds < 60)  return `${seconds}s`;
+  const mins = seconds / 60;
+  return `${mins % 1 === 0 ? mins : mins.toFixed(1)}m`;
+}
 
-const liveKPIs: { label: string; value: string; sub: string; icon: React.ElementType }[] = [
-  { label: 'Online Now',     value: '1,847',  sub: 'active sessions',  icon: Zap        },
-  { label: 'Peak Today',     value: '4,231',  sub: 'at 9:14 PM',       icon: TrendingUp },
-  { label: 'Avg Session',    value: '18.4m',  sub: 'per user today',   icon: Clock      },
-  { label: 'Sessions Today', value: '12,840', sub: 'across all types', icon: Users      },
-];
+function fmtPeakTime(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+// ─── Active Users mock data ───────────────────────────────────────────────────
 
 const hourlyData = [
     420,  280,  190,  140,  120,  180,
@@ -349,20 +355,57 @@ function AcquisitionChart() {
 // ─── Tab: Active Users ────────────────────────────────────────────────────────
 
 function ActiveUsersTab() {
-  const [period, setPeriod] = useState<Period>('week');
-  const data     = trendData[period];
+  const [period, setPeriod]   = useState<Period>('week');
+  const [kpis, setKpis]       = useState<ActiveUserKPIs | null>(null);
+  const [kpisLoading, setKpisLoading] = useState(true);
+
+  useEffect(() => {
+    api.analytics.activeUserKPIs()
+      .then(setKpis)
+      .catch(() => {})
+      .finally(() => setKpisLoading(false));
+  }, []);
+
+  const data      = trendData[period];
   const periodAvg = arrAvg(data.total);
-  const pAvg     = arrAvg(data.patriarchs);
-  const mAvg     = arrAvg(data.muses);
-  const cAvg     = arrAvg(data.constellations);
-  const showRefs = period !== 'year';
+  const pAvg      = arrAvg(data.patriarchs);
+  const mAvg      = arrAvg(data.muses);
+  const cAvg      = arrAvg(data.constellations);
+  const showRefs  = period !== 'year';
+
+  const liveCards: { label: string; value: string; sub: string; icon: React.ElementType }[] = [
+    {
+      label: 'Online Now',
+      value: kpisLoading ? '—' : fmt(kpis?.online_now ?? 0),
+      sub:   'active sessions',
+      icon:  Zap,
+    },
+    {
+      label: 'Peak Today',
+      value: kpisLoading ? '—' : fmt(kpis?.peak_today ?? 0),
+      sub:   kpis?.peak_today_at ? `at ${fmtPeakTime(kpis.peak_today_at)}` : 'no data yet',
+      icon:  TrendingUp,
+    },
+    {
+      label: 'Avg Session',
+      value: kpisLoading ? '—' : fmtDuration(kpis?.avg_session_seconds ?? 0),
+      sub:   'per user today',
+      icon:  Clock,
+    },
+    {
+      label: 'Sessions Today',
+      value: kpisLoading ? '—' : fmt(kpis?.sessions_today ?? 0),
+      sub:   'across all types',
+      icon:  Users,
+    },
+  ];
 
   return (
     <div className="space-y-5">
 
       {/* KPI pills */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {liveKPIs.map(k => {
+        {liveCards.map(k => {
           const Icon = k.icon;
           return (
             <div key={k.label} className="card p-4">
