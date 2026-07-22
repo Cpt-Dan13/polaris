@@ -76,6 +76,10 @@ export const api = {
     subscriptionDistribution: () => request<PlanDistribution>('/finance/subscriptions/plan-distribution'),
     subscriptionTrend:        (period: 'week' | 'month' | 'year') => request<SubTrendData>(`/finance/subscriptions/trend?period=${period}`),
     subscriptionEvents:       (limit = 20) => request<SubEvent[]>(`/finance/subscriptions/recent-events?limit=${limit}`),
+    revenueKPIs:              () => request<RevenueKPIs>('/finance/revenue/kpis'),
+    revenueTrend:             (period: 'week' | 'month' | 'year') => request<RevenueTrendData>(`/finance/revenue/trend?period=${period}`),
+    revenuePlanMRR:           () => request<PlanMRRData>('/finance/revenue/plan-mrr'),
+    revenueTransactions:      (limit = 20) => request<RevTransaction[]>(`/finance/revenue/recent-transactions?limit=${limit}`),
   },
 
   users: {
@@ -311,4 +315,41 @@ export interface AdminUser {
   role:         'viewer' | 'support' | 'moderator' | 'admin' | 'super_admin'
   created_at:   string
   last_seen_at: string | null
+}
+
+export interface RevenueKPIs {
+  gross_mtd:   number
+  gross_delta: number
+  net_mtd:     number
+  net_delta:   number
+}
+
+export interface RevenueTrendData {
+  labels: string[]
+  gross:  number[]
+  net:    number[]
+}
+
+export interface PlanMRRTier {
+  tier:    string
+  current: number
+  prev:    number
+}
+
+export interface PlanMRRData {
+  plans:     PlanMRRTier[]
+  total_mrr: number
+}
+
+export type RevTxEventType = 'subscribed' | 'upgraded' | 'downgraded' | 'renewed' | 'reactivated'
+
+export interface RevTransaction {
+  id:         string
+  name:       string
+  event_type: RevTxEventType
+  tier:       string | null
+  from_tier:  string | null
+  to_tier:    string | null
+  amount:     number
+  created_at: string
 }
