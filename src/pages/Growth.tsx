@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
-import type { ActiveUserKPIs, TrendData, TopActiveUser, AcquisitionKPIs, AcquisitionSignups, AcquisitionRetention } from '../lib/api';
+import type { ActiveUserKPIs, TrendData, TopActiveUser, AcquisitionKPIs, AcquisitionSignups, AcquisitionRetention, MarketEntry } from '../lib/api';
 import {
   Users, TrendingUp, Activity, UserMinus, MapPin,
   Clock, Zap,
@@ -102,15 +102,6 @@ const sourcesData = [
   { label: 'Paid Ads',       pct: 12, color: '#2196f3' },
 ];
 
-const marketsData = [
-  { city: 'Phoenix, AZ',  users:  387, delta: 31.2 },
-  { city: 'Atlanta, GA',  users:  892, delta: 24.1 },
-  { city: 'Dallas, TX',   users:  445, delta: 22.8 },
-  { city: 'Houston, TX',  users:  741, delta: 18.7 },
-  { city: 'Miami, FL',    users:  623, delta: 16.4 },
-  { city: 'Chicago, IL',  users:  598, delta: 14.2 },
-  { city: 'New York, NY', users: 1204, delta: 11.8 },
-];
 
 const ACQ_COLORS: Record<string, string> = { patriarchs: ACCENT, muses: GOLD, constellations: PURPLE };
 const ACQ_LABELS: Record<string, string> = { patriarchs: 'Patriarchs', muses: 'Muses', constellations: 'Constellations' };
@@ -627,8 +618,10 @@ function AcquisitionTab() {
   const [kpisLoading, setKpisLoading]     = useState(true);
   const [signups, setSignups]               = useState<AcquisitionSignups | null>(null);
   const [signupsLoading, setSignupsLoading] = useState(true);
-  const [retention, setRetention]           = useState<AcquisitionRetention | null>(null);
+  const [retention, setRetention]               = useState<AcquisitionRetention | null>(null);
   const [retentionLoading, setRetentionLoading] = useState(true);
+  const [markets, setMarkets]                   = useState<MarketEntry[]>([]);
+  const [marketsLoading, setMarketsLoading]     = useState(true);
 
   useEffect(() => {
     api.analytics.acquisitionKPIs()
@@ -643,6 +636,10 @@ function AcquisitionTab() {
       .then(setRetention)
       .catch(() => {})
       .finally(() => setRetentionLoading(false));
+    api.analytics.acquisitionMarkets()
+      .then(setMarkets)
+      .catch(() => {})
+      .finally(() => setMarketsLoading(false));
   }, []);
 
   function fmtDelta(v: number, pp = false): string {
@@ -795,7 +792,10 @@ function AcquisitionTab() {
         </div>
 
         <div className="card p-5">
-          <h3 className="text-sm font-semibold mb-5" style={{ color: 'var(--text)' }}>Signup Sources</h3>
+          <div className="flex items-center gap-2 mb-5">
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Signup Sources</h3>
+            <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,193,7,0.15)', color: '#b8860b' }}>Mockup</span>
+          </div>
           <div className="space-y-4">
             {sourcesData.map(s => (
               <div key={s.label}>
@@ -823,29 +823,51 @@ function AcquisitionTab() {
         <div className="flex items-center gap-2 mb-4">
           <MapPin size={15} style={{ color: ACCENT }} />
           <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Top Growing Markets</h3>
-          <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>ranked by MoM user growth</span>
+          <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>ranked by 3-month growth</span>
         </div>
-        <div className="space-y-2">
-          {marketsData.map((m, i) => {
-            const deltaColor = m.delta > 25 ? '#4caf50' : m.delta > 15 ? GOLD : ACCENT;
-            return (
-              <div key={m.city} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
-                <span className="text-sm font-black w-5 text-center flex-shrink-0"
-                      style={{ color: i < 3 ? RANK_COLORS[i] : 'var(--text-light)' }}>
-                  {i + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{m.city}</div>
-                  <div className="text-xs" style={{ color: 'var(--text-light)' }}>{m.users.toLocaleString()} new users this month</div>
+        {marketsLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: ACCENT, borderTopColor: 'transparent' }} />
+          </div>
+        ) : markets.length === 0 ? (
+          <div className="flex items-center justify-center py-10">
+            <span className="text-sm" style={{ color: 'var(--text-light)' }}>No location data yet — users haven't set a city</span>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {markets.map((m, i) => {
+              const deltaColor = m.delta === null ? ACCENT
+                : m.delta > 25 ? '#4caf50'
+                : m.delta > 15 ? GOLD
+                : m.delta >= 0  ? ACCENT
+                : '#f44336';
+              return (
+                <div key={m.city} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
+                  <span className="text-sm font-black w-5 text-center flex-shrink-0"
+                        style={{ color: i < 3 ? RANK_COLORS[i] : 'var(--text-light)' }}>
+                    {i + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{m.city}</div>
+                    <div className="text-xs" style={{ color: 'var(--text-light)' }}>{m.users.toLocaleString()} new users · last 3 months</div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    {m.delta === null ? (
+                      <div className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: `${ACCENT}22`, color: ACCENT }}>New</div>
+                    ) : (
+                      <>
+                        <div className="text-sm font-bold" style={{ color: deltaColor }}>
+                          {m.delta >= 0 ? '+' : ''}{m.delta}%
+                        </div>
+                        <div className="text-xs" style={{ color: 'var(--text-light)' }}>vs prior 3 months</div>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <div className="text-sm font-bold" style={{ color: deltaColor }}>+{m.delta}%</div>
-                  <div className="text-xs" style={{ color: 'var(--text-light)' }}>vs last month</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>

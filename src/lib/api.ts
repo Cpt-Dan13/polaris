@@ -47,6 +47,7 @@ export const api = {
     acquisitionKPIs:      () => request<AcquisitionKPIs>('/analytics/acquisition/kpis'),
     acquisitionSignups:   () => request<AcquisitionSignups>('/analytics/acquisition/signups'),
     acquisitionRetention: () => request<AcquisitionRetention>('/analytics/acquisition/retention'),
+    acquisitionMarkets:   (limit = 8) => request<MarketEntry[]>(`/analytics/acquisition/markets?limit=${limit}`),
   },
 
   moderation: {
@@ -140,6 +141,12 @@ export interface ProfileHealthData {
   patriarch:     { overall: number; signals: HealthSignal[] }
   muse:          { overall: number; signals: HealthSignal[] }
   constellation: { overall: number; signals: HealthSignal[] }
+}
+
+export interface MarketEntry {
+  city:  string
+  users: number
+  delta: number | null  // null = new market (no last-month baseline)
 }
 
 export interface RetentionBucket {
