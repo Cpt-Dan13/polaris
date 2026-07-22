@@ -42,7 +42,8 @@ export const api = {
     health:            () => request<ProfileHealthData>('/analytics/insights/health'),
     correlations:      () => request<CorrelationLifts>('/analytics/insights/correlations'),
     activeUserKPIs:    () => request<ActiveUserKPIs>('/analytics/active-users/kpis'),
-    activeUserTrend:   (period: 'week' | 'month' | 'year') => request<TrendData>(`/analytics/active-users/trend?period=${period}`),
+    activeUserTrend:    (period: 'week' | 'month' | 'year') => request<TrendData>(`/analytics/active-users/trend?period=${period}`),
+    activeUserTopUsers: (limit = 10) => request<TopActiveUser[]>(`/analytics/active-users/top-users?limit=${limit}`),
   },
 
   moderation: {
@@ -136,6 +137,17 @@ export interface ProfileHealthData {
   patriarch:     { overall: number; signals: HealthSignal[] }
   muse:          { overall: number; signals: HealthSignal[] }
   constellation: { overall: number; signals: HealthSignal[] }
+}
+
+export interface TopActiveUser {
+  user_id:              string
+  name:                 string
+  initials:             string
+  type:                 string
+  photo_url:            string | null
+  sessions:             number
+  avg_duration_seconds: number
+  total_seconds:        number
 }
 
 export interface TrendData {

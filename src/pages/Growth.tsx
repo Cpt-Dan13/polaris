@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
-import type { ActiveUserKPIs, TrendData } from '../lib/api';
+import type { ActiveUserKPIs, TrendData, TopActiveUser } from '../lib/api';
 import {
   Users, TrendingUp, Activity, UserMinus, MapPin,
-  Clock, Zap, UserCheck, Heart, Network,
+  Clock, Zap,
 } from 'lucide-react';
 
 const ACCENT      = '#e94560';
@@ -60,6 +60,15 @@ function fmtDuration(seconds: number): string {
   return `${mins % 1 === 0 ? mins : mins.toFixed(1)}m`;
 }
 
+function fmtTotalTime(seconds: number): string {
+  if (seconds < 60)   return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  if (mins < 60)      return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 function fmtPeakTime(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -76,18 +85,8 @@ const X_HOUR_LABELS = [
 
 const PERIOD_LABELS: Record<Period, string> = { week: 'This Week', month: 'This Month', year: 'This Year' };
 
-const topUsers: { name: string; type: string; sessions: number; avgDuration: string; total: string }[] = [
-  { name: 'sophia_l',   type: 'Muse',          sessions: 47, avgDuration: '24m', total: '18h 48m' },
-  { name: 'marcus_w',   type: 'Patriarch',      sessions: 41, avgDuration: '21m', total: '14h 21m' },
-  { name: 'webb_const', type: 'Constellation',  sessions: 38, avgDuration: '19m', total: '12h 2m'  },
-  { name: 'isabella_c', type: 'Muse',           sessions: 35, avgDuration: '22m', total: '12h 50m' },
-  { name: 'james_ok',   type: 'Patriarch',      sessions: 31, avgDuration: '18m', total: '9h 18m'  },
-  { name: 'luna_r',     type: 'Muse',           sessions: 28, avgDuration: '20m', total: '9h 20m'  },
-  { name: 'alex_cr',    type: 'Patriarch',      sessions: 24, avgDuration: '17m', total: '6h 48m'  },
-];
 
 const TYPE_COLORS: Record<string, string> = { Patriarch: ACCENT, Muse: GOLD, Constellation: PURPLE };
-const TYPE_ICONS:  Record<string, React.ElementType> = { Patriarch: UserCheck, Muse: Heart, Constellation: Network };
 
 // ─── Acquisition & Retention mock data ───────────────────────────────────────
 
@@ -410,8 +409,10 @@ function ActiveUsersTab() {
   const [period, setPeriod]             = useState<Period>('week');
   const [kpis, setKpis]                 = useState<ActiveUserKPIs | null>(null);
   const [kpisLoading, setKpisLoading]   = useState(true);
-  const [liveTrend, setLiveTrend]       = useState<TrendData | null>(null);
-  const [trendLoading, setTrendLoading] = useState(true);
+  const [liveTrend, setLiveTrend]         = useState<TrendData | null>(null);
+  const [trendLoading, setTrendLoading]   = useState(true);
+  const [topUsers, setTopUsers]           = useState<TopActiveUser[]>([]);
+  const [topUsersLoading, setTopUsersLoading] = useState(true);
 
   useEffect(() => {
     api.analytics.activeUserKPIs()
@@ -427,6 +428,13 @@ function ActiveUsersTab() {
       .catch(() => {})
       .finally(() => setTrendLoading(false));
   }, [period]);
+
+  useEffect(() => {
+    api.analytics.activeUserTopUsers(10)
+      .then(setTopUsers)
+      .catch(() => {})
+      .finally(() => setTopUsersLoading(false));
+  }, []);
 
   const periodAvg  = arrAvg(liveTrend?.total          ?? [0]);
   const pAvg       = arrAvg(liveTrend?.patriarchs     ?? [0]);
@@ -531,21 +539,15 @@ function ActiveUsersTab() {
         </div>
         <div className="grid grid-cols-3 gap-3 mt-3">
           {[
-            { label: 'Patriarchs',     value: pAvg, color: ACCENT,  icon: UserCheck },
-            { label: 'Muses',          value: mAvg, color: GOLD,    icon: Heart     },
-            { label: 'Constellations', value: cAvg, color: PURPLE,  icon: Network   },
-          ].map(row => {
-            const Icon = row.icon;
-            return (
-              <div key={row.label} className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
-                <Icon size={13} style={{ color: row.color, flexShrink: 0 }} />
-                <div className="min-w-0">
-                  <div className="text-xs font-bold truncate" style={{ color: row.color }}>{fmt(row.value)}</div>
-                  <div className="text-xs truncate" style={{ color: 'var(--text-light)', fontSize: 10 }}>{row.label}</div>
-                </div>
-              </div>
-            );
-          })}
+            { label: 'Patriarchs',     value: pAvg, color: ACCENT  },
+            { label: 'Muses',          value: mAvg, color: GOLD    },
+            { label: 'Constellations', value: cAvg, color: PURPLE  },
+          ].map(row => (
+            <div key={row.label} className="p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
+              <div className="text-xs font-bold truncate" style={{ color: row.color }}>{fmt(row.value)}</div>
+              <div className="text-xs truncate" style={{ color: 'var(--text-light)', fontSize: 10 }}>{row.label}</div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -557,25 +559,35 @@ function ActiveUsersTab() {
           <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>by sessions this week</span>
         </div>
         <div className="space-y-2">
-          {topUsers.map((u, i) => {
-            const typeColor = TYPE_COLORS[u.type];
-            const TypeIcon  = TYPE_ICONS[u.type];
+          {topUsersLoading ? (
+            <div className="py-5 text-center text-xs" style={{ color: 'var(--text-light)' }}>Loading…</div>
+          ) : topUsers.length === 0 ? (
+            <div className="py-5 text-center text-xs" style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>
+              No sessions recorded this week
+            </div>
+          ) : topUsers.map((u, i) => {
+            const typeColor = TYPE_COLORS[u.type] ?? 'var(--text-secondary)';
             return (
-              <div key={u.name} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
+              <div key={u.user_id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
                 <span className="text-sm font-black w-5 text-center flex-shrink-0"
                       style={{ color: i < 3 ? RANK_COLORS[i] : 'var(--text-light)' }}>
                   {i + 1}
                 </span>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
                      style={{ background: `${typeColor}20` }}>
-                  <TypeIcon size={13} style={{ color: typeColor }} />
+                  {u.photo_url
+                    ? <img src={u.photo_url} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span style={{ fontSize: 10, fontWeight: 700, color: typeColor }}>{u.initials}</span>
+                  }
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>@{u.name}</div>
-                  <div className="text-xs" style={{ color: 'var(--text-light)' }}>{u.sessions} sessions · {u.avgDuration} avg</div>
+                  <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{u.name}</div>
+                  <div className="text-xs" style={{ color: 'var(--text-light)' }}>
+                    {u.sessions} session{u.sessions !== 1 ? 's' : ''} · {fmtDuration(u.avg_duration_seconds)} avg
+                  </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <div className="text-sm font-bold" style={{ color: 'var(--text)' }}>{u.total}</div>
+                  <div className="text-sm font-bold" style={{ color: 'var(--text)' }}>{fmtTotalTime(u.total_seconds)}</div>
                   <div className="text-xs" style={{ color: 'var(--text-light)' }}>total time</div>
                 </div>
                 <span className="text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
