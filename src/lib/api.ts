@@ -44,8 +44,9 @@ export const api = {
     activeUserKPIs:    () => request<ActiveUserKPIs>('/analytics/active-users/kpis'),
     activeUserTrend:    (period: 'week' | 'month' | 'year') => request<TrendData>(`/analytics/active-users/trend?period=${period}`),
     activeUserTopUsers:  (limit = 10) => request<TopActiveUser[]>(`/analytics/active-users/top-users?limit=${limit}`),
-    acquisitionKPIs:     () => request<AcquisitionKPIs>('/analytics/acquisition/kpis'),
-    acquisitionSignups:  () => request<AcquisitionSignups>('/analytics/acquisition/signups'),
+    acquisitionKPIs:      () => request<AcquisitionKPIs>('/analytics/acquisition/kpis'),
+    acquisitionSignups:   () => request<AcquisitionSignups>('/analytics/acquisition/signups'),
+    acquisitionRetention: () => request<AcquisitionRetention>('/analytics/acquisition/retention'),
   },
 
   moderation: {
@@ -139,6 +140,19 @@ export interface ProfileHealthData {
   patriarch:     { overall: number; signals: HealthSignal[] }
   muse:          { overall: number; signals: HealthSignal[] }
   constellation: { overall: number; signals: HealthSignal[] }
+}
+
+export interface RetentionBucket {
+  d1:          number
+  d7:          number
+  d30:         number
+  cohort_size: number
+}
+
+export interface AcquisitionRetention {
+  patriarchs:     RetentionBucket
+  muses:          RetentionBucket
+  constellations: RetentionBucket
 }
 
 export interface AcquisitionSignups {

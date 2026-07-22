@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
-import type { ActiveUserKPIs, TrendData, TopActiveUser, AcquisitionKPIs, AcquisitionSignups } from '../lib/api';
+import type { ActiveUserKPIs, TrendData, TopActiveUser, AcquisitionKPIs, AcquisitionSignups, AcquisitionRetention } from '../lib/api';
 import {
   Users, TrendingUp, Activity, UserMinus, MapPin,
   Clock, Zap,
@@ -94,11 +94,6 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 
 
 
-const retentionData = [
-  { label: 'Patriarchs',     color: ACCENT,  d1: 72, d7: 48, d30: 31 },
-  { label: 'Muses',          color: GOLD,    d1: 84, d7: 63, d30: 42 },
-  { label: 'Constellations', color: PURPLE,  d1: 68, d7: 41, d30: 24 },
-];
 
 const sourcesData = [
   { label: 'Organic Search', pct: 38, color: ACCENT    },
@@ -630,8 +625,10 @@ function ActiveUsersTab() {
 function AcquisitionTab() {
   const [kpis, setKpis]                   = useState<AcquisitionKPIs | null>(null);
   const [kpisLoading, setKpisLoading]     = useState(true);
-  const [signups, setSignups]             = useState<AcquisitionSignups | null>(null);
+  const [signups, setSignups]               = useState<AcquisitionSignups | null>(null);
   const [signupsLoading, setSignupsLoading] = useState(true);
+  const [retention, setRetention]           = useState<AcquisitionRetention | null>(null);
+  const [retentionLoading, setRetentionLoading] = useState(true);
 
   useEffect(() => {
     api.analytics.acquisitionKPIs()
@@ -642,6 +639,10 @@ function AcquisitionTab() {
       .then(setSignups)
       .catch(() => {})
       .finally(() => setSignupsLoading(false));
+    api.analytics.acquisitionRetention()
+      .then(setRetention)
+      .catch(() => {})
+      .finally(() => setRetentionLoading(false));
   }, []);
 
   function fmtDelta(v: number, pp = false): string {
@@ -741,25 +742,56 @@ function AcquisitionTab() {
               <span key={d} className="text-xs font-semibold text-center" style={{ color: 'var(--text-secondary)' }}>{d}</span>
             ))}
           </div>
-          {retentionData.map(row => (
-            <div key={row.label} className="grid py-2.5 items-center" style={{ gridTemplateColumns: '1fr repeat(3, 56px)' }}>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: row.color }} />
-                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
-              </div>
-              {[row.d1, row.d7, row.d30].map((v, i) => {
-                const color = v >= 75 ? '#4caf50' : v >= 55 ? GOLD : v >= 35 ? ACCENT : '#f44336';
-                return (
-                  <div key={i} className="text-center">
-                    <span className="text-sm font-bold" style={{ color }}>{v}%</span>
-                  </div>
-                );
-              })}
+          {retentionLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: ACCENT, borderTopColor: 'transparent' }} />
             </div>
-          ))}
-          <p className="text-xs mt-3" style={{ color: 'var(--text-light)' }}>
-            % of users still active at Day 1 / 7 / 30 after signup
-          </p>
+          ) : (() => {
+            const rows = [
+              { label: 'Patriarchs',     color: ACCENT,  bucket: retention?.patriarchs },
+              { label: 'Muses',          color: GOLD,    bucket: retention?.muses },
+              { label: 'Constellations', color: PURPLE,  bucket: retention?.constellations },
+            ];
+            const totalCohort = (retention?.patriarchs.cohort_size ?? 0)
+              + (retention?.muses.cohort_size ?? 0)
+              + (retention?.constellations.cohort_size ?? 0);
+            return (
+              <>
+                {rows.map(row => {
+                  const vals = row.bucket
+                    ? [row.bucket.d1, row.bucket.d7, row.bucket.d30]
+                    : [0, 0, 0];
+                  const noData = !row.bucket || row.bucket.cohort_size === 0;
+                  return (
+                    <div key={row.label} className="grid py-2.5 items-center" style={{ gridTemplateColumns: '1fr repeat(3, 56px)' }}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: row.color }} />
+                        <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
+                      </div>
+                      {vals.map((v, i) => {
+                        if (noData) return (
+                          <div key={i} className="text-center">
+                            <span className="text-sm font-bold" style={{ color: 'var(--text-light)' }}>—</span>
+                          </div>
+                        );
+                        const color = v >= 75 ? '#4caf50' : v >= 55 ? GOLD : v >= 35 ? ACCENT : '#f44336';
+                        return (
+                          <div key={i} className="text-center">
+                            <span className="text-sm font-bold" style={{ color }}>{v}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+                <p className="text-xs mt-3" style={{ color: 'var(--text-light)' }}>
+                  {totalCohort > 0
+                    ? `Based on ${fmt(totalCohort)} users who signed up 30–90 days ago · message activity`
+                    : 'Insufficient cohort data — needs users who signed up 30+ days ago'}
+                </p>
+              </>
+            );
+          })()}
         </div>
 
         <div className="card p-5">
