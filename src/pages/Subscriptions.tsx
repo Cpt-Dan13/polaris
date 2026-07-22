@@ -343,7 +343,7 @@ export default function Subscriptions() {
                         </span>
                         <span className="text-xs px-1.5 py-0.5 rounded font-semibold"
                               style={{ background: `${color}18`, color }}>
-                          ${plan.price}/mo
+                          {plan.price === 0 ? 'FREE' : `$${plan.price}/mo`}
                         </span>
                       </div>
                       <div className="text-right">
@@ -356,12 +356,14 @@ export default function Subscriptions() {
                     <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg)' }}>
                       <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
                     </div>
-                    <div className="flex justify-between mt-1">
-                      <span style={{ fontSize: 10, color: 'var(--text-light)' }}>MRR contribution</span>
-                      <span style={{ fontSize: 10, color, fontWeight: 600 }}>
-                        ${plan.mrr.toLocaleString()} · {mrrPct}%
-                      </span>
-                    </div>
+                    {plan.price > 0 && (
+                      <div className="flex justify-between mt-1">
+                        <span style={{ fontSize: 10, color: 'var(--text-light)' }}>MRR contribution</span>
+                        <span style={{ fontSize: 10, color, fontWeight: 600 }}>
+                          ${plan.mrr.toLocaleString()} · {mrrPct}%
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
