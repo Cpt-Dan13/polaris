@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
-import type { ActiveUserKPIs, TrendData, TopActiveUser } from '../lib/api';
+import type { ActiveUserKPIs, TrendData, TopActiveUser, AcquisitionKPIs } from '../lib/api';
 import {
   Users, TrendingUp, Activity, UserMinus, MapPin,
   Clock, Zap,
@@ -98,12 +98,6 @@ const acquisitionData = {
   constellations: [ 45,  52,  61,  78,  94, 103, 128, 142, 167, 189, 214, 241],
 };
 
-const growthKPIs: { label: string; value: string; delta: string; positive: boolean; icon: React.ElementType }[] = [
-  { label: 'New Users (Month)', value: '4,821', delta: '+12.4%', positive: true, icon: Users      },
-  { label: 'MoM Growth Rate',   value: '12.4%', delta: '+2.1pp', positive: true, icon: TrendingUp },
-  { label: 'DAU / MAU Ratio',   value: '34.2%', delta: '+1.8pp', positive: true, icon: Activity   },
-  { label: 'Monthly Churn',     value: '6.8%',  delta: '−0.4pp', positive: true, icon: UserMinus  },
-];
 
 const retentionData = [
   { label: 'Patriarchs',     color: ACCENT,  d1: 72, d7: 48, d30: 31 },
@@ -617,12 +611,58 @@ function ActiveUsersTab() {
 // ─── Tab: Acquisition & Retention ────────────────────────────────────────────
 
 function AcquisitionTab() {
+  const [kpis, setKpis]               = useState<AcquisitionKPIs | null>(null);
+  const [kpisLoading, setKpisLoading] = useState(true);
+
+  useEffect(() => {
+    api.analytics.acquisitionKPIs()
+      .then(setKpis)
+      .catch(() => {})
+      .finally(() => setKpisLoading(false));
+  }, []);
+
+  function fmtDelta(v: number, pp = false): string {
+    const sign = v >= 0 ? '+' : '−';
+    return `${sign}${Math.abs(v).toFixed(1)}${pp ? 'pp' : '%'}`;
+  }
+
+  const liveCards = [
+    {
+      label:    'New Users (Month)',
+      value:    kpisLoading ? '—' : fmt(kpis?.new_users_month ?? 0),
+      delta:    fmtDelta(kpis?.new_users_delta ?? 0),
+      positive: (kpis?.new_users_delta ?? 0) >= 0,
+      icon:     Users,
+    },
+    {
+      label:    'MoM Growth Rate',
+      value:    kpisLoading ? '—' : `${(kpis?.mom_growth_rate ?? 0).toFixed(1)}%`,
+      delta:    fmtDelta(kpis?.mom_growth_delta ?? 0, true),
+      positive: (kpis?.mom_growth_delta ?? 0) >= 0,
+      icon:     TrendingUp,
+    },
+    {
+      label:    'DAU / MAU Ratio',
+      value:    kpisLoading ? '—' : `${(kpis?.dau_mau_ratio ?? 0).toFixed(1)}%`,
+      delta:    fmtDelta(kpis?.dau_mau_delta ?? 0, true),
+      positive: (kpis?.dau_mau_delta ?? 0) >= 0,
+      icon:     Activity,
+    },
+    {
+      label:    'Monthly Churn',
+      value:    kpisLoading ? '—' : `${(kpis?.monthly_churn ?? 0).toFixed(1)}%`,
+      delta:    fmtDelta(kpis?.monthly_churn_delta ?? 0, true),
+      positive: (kpis?.monthly_churn_delta ?? 0) <= 0,
+      icon:     UserMinus,
+    },
+  ];
+
   return (
     <div className="space-y-5">
 
       {/* KPI pills */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {growthKPIs.map(k => {
+        {liveCards.map(k => {
           const Icon = k.icon;
           return (
             <div key={k.label} className="card p-4">
@@ -630,10 +670,12 @@ function AcquisitionTab() {
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${ACCENT}15` }}>
                   <Icon size={15} style={{ color: ACCENT }} />
                 </div>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                      style={{ background: k.positive ? 'rgba(76,175,80,0.12)' : 'rgba(244,67,54,0.12)', color: k.positive ? '#4caf50' : '#f44336' }}>
-                  {k.delta}
-                </span>
+                {!kpisLoading && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                        style={{ background: k.positive ? 'rgba(76,175,80,0.12)' : 'rgba(244,67,54,0.12)', color: k.positive ? '#4caf50' : '#f44336' }}>
+                    {k.delta}
+                  </span>
+                )}
               </div>
               <div className="text-2xl font-black" style={{ color: 'var(--text)' }}>{k.value}</div>
               <div className="text-xs mt-0.5" style={{ color: 'var(--text-light)' }}>{k.label}</div>

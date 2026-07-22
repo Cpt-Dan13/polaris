@@ -43,7 +43,8 @@ export const api = {
     correlations:      () => request<CorrelationLifts>('/analytics/insights/correlations'),
     activeUserKPIs:    () => request<ActiveUserKPIs>('/analytics/active-users/kpis'),
     activeUserTrend:    (period: 'week' | 'month' | 'year') => request<TrendData>(`/analytics/active-users/trend?period=${period}`),
-    activeUserTopUsers: (limit = 10) => request<TopActiveUser[]>(`/analytics/active-users/top-users?limit=${limit}`),
+    activeUserTopUsers:  (limit = 10) => request<TopActiveUser[]>(`/analytics/active-users/top-users?limit=${limit}`),
+    acquisitionKPIs:     () => request<AcquisitionKPIs>('/analytics/acquisition/kpis'),
   },
 
   moderation: {
@@ -137,6 +138,17 @@ export interface ProfileHealthData {
   patriarch:     { overall: number; signals: HealthSignal[] }
   muse:          { overall: number; signals: HealthSignal[] }
   constellation: { overall: number; signals: HealthSignal[] }
+}
+
+export interface AcquisitionKPIs {
+  new_users_month:     number
+  new_users_delta:     number
+  mom_growth_rate:     number
+  mom_growth_delta:    number
+  dau_mau_ratio:       number
+  dau_mau_delta:       number
+  monthly_churn:       number
+  monthly_churn_delta: number
 }
 
 export interface TopActiveUser {
