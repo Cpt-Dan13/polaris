@@ -143,6 +143,7 @@ export interface ActiveUserKPIs {
   avg_session_seconds: number
   peak_today:          number
   peak_today_at:       string | null
+  hourly:              number[]
 }
 
 export interface CorrelationLifts {

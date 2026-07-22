@@ -173,50 +173,117 @@ const ACQ_LABELS: Record<string, string> = { patriarchs: 'Patriarchs', muses: 'M
 
 // ─── Charts ───────────────────────────────────────────────────────────────────
 
-function HourlyChart() {
+function HourlyChart({ data }: { data?: number[] }) {
+  const [hoveredBar, setHoveredBar] = useState<number | null>(null);
+
+  const chartData = (data && data.some(v => v > 0)) ? data : hourlyData;
+  const isLive    = !!(data && data.some(v => v > 0));
+
   const W = 520, H = 160;
   const pad = { t: 20, r: 20, b: 32, l: 44 };
   const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
-  const maxVal = Math.max(...hourlyData);
-  const n = hourlyData.length;
-  const barW = cW / n, gap = 2;
-  const peakIdx = hourlyData.indexOf(maxVal);
+  const maxVal  = Math.max(...chartData, 1);
+  const n       = chartData.length;
+  const barW    = cW / n, gap = 2;
+  const peakIdx = chartData.indexOf(Math.max(...chartData));
+  const bottomY = pad.t + cH;
 
   function bX(i: number) { return pad.l + i * barW + gap / 2; }
-  function bH(v: number) { return (v / maxVal) * cH; }
-  function bY(v: number) { return pad.t + cH - bH(v); }
-  function barOpacity(v: number) {
+  function bCx(i: number) { return bX(i) + (barW - gap) / 2; }
+  function bH(v: number)  { return Math.max(2, (v / maxVal) * cH); }
+  function bY(v: number)  { return bottomY - bH(v); }
+  function baseOpacity(v: number) {
     const r = v / maxVal;
     return r > 0.85 ? 1 : r > 0.65 ? 0.62 : r > 0.45 ? 0.42 : r > 0.25 ? 0.26 : 0.14;
   }
 
-  const refYmo = pad.t + cH - (MONTHLY_PEAK_AVG / maxVal) * cH;
-  const refYyr = pad.t + cH - (YEARLY_PEAK_AVG  / maxVal) * cH;
-  const yTicks = [0, 1000, 2000, 3000];
+  const refYmo = bottomY - (MONTHLY_PEAK_AVG / maxVal) * cH;
+  const refYyr = bottomY - (YEARLY_PEAK_AVG  / maxVal) * cH;
+  const yTicks = isLive
+    ? [0, Math.round(maxVal * 0.33), Math.round(maxVal * 0.67), maxVal]
+    : [0, 1000, 2000, 3000];
+
+  const anyHovered = hoveredBar !== null;
 
   return (
     <div style={{ overflowX: 'auto' }}>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ minWidth: 420, width: '100%', height: 'auto', display: 'block' }}>
         {yTicks.map(t => {
-          const y = pad.t + cH - (t / maxVal) * cH;
+          const y = bottomY - (t / maxVal) * cH;
           return (
             <g key={t}>
               <line x1={pad.l} x2={W - pad.r} y1={y} y2={y} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="3,3" />
               <text x={pad.l - 6} y={y + 4} textAnchor="end" style={{ fill: 'var(--text-light)', fontSize: 9 }}>
-                {t === 0 ? '0' : `${t / 1000}k`}
+                {isLive ? t : (t === 0 ? '0' : `${t / 1000}k`)}
               </text>
             </g>
           );
         })}
-        <line x1={pad.l} x2={W - pad.r} y1={refYmo} y2={refYmo} stroke={GOLD}   strokeWidth="1" strokeDasharray="5,3" />
-        <line x1={pad.l} x2={W - pad.r} y1={refYyr} y2={refYyr} stroke={PURPLE} strokeWidth="1" strokeDasharray="5,3" />
-        {hourlyData.map((v, i) => (
-          <rect key={i} x={bX(i)} y={bY(v)} width={barW - gap} height={bH(v)}
-                rx="2" fill={ACCENT} fillOpacity={i === peakIdx ? 1 : barOpacity(v)} />
-        ))}
+
+        {!isLive && (
+          <>
+            <line x1={pad.l} x2={W - pad.r} y1={refYmo} y2={refYmo} stroke={GOLD}   strokeWidth="1" strokeDasharray="5,3" />
+            <line x1={pad.l} x2={W - pad.r} y1={refYyr} y2={refYyr} stroke={PURPLE} strokeWidth="1" strokeDasharray="5,3" />
+          </>
+        )}
+
+        {chartData.map((v, i) => {
+          const isHovered = hoveredBar === i;
+          const isPeak    = i === peakIdx && v > 0;
+          const opacity   = anyHovered
+            ? (isHovered ? 1 : 0.3)
+            : (isPeak ? 1 : baseOpacity(v));
+          const scaleY    = isHovered ? 1.08 : 1;
+          const barHeight = bH(v);
+          const barTop    = bY(v);
+
+          return (
+            <rect
+              key={i}
+              x={bX(i)}
+              y={barTop}
+              width={barW - gap}
+              height={barHeight}
+              rx="2"
+              fill={ACCENT}
+              fillOpacity={opacity}
+              onMouseEnter={() => setHoveredBar(i)}
+              onMouseLeave={() => setHoveredBar(null)}
+              style={{
+                cursor:          'pointer',
+                transformOrigin: `${bCx(i)}px ${bottomY}px`,
+                transform:       `scaleY(${scaleY})`,
+                transition:      'transform 0.18s ease, fill-opacity 0.15s ease, filter 0.15s ease',
+                filter:          isHovered ? 'brightness(1.25)' : 'brightness(1)',
+              }}
+            />
+          );
+        })}
+
+        {/* Tooltip */}
+        {hoveredBar !== null && chartData[hoveredBar] > 0 && (() => {
+          const i   = hoveredBar;
+          const v   = chartData[i];
+          const cx  = bCx(i);
+          const ty  = bY(v) - 8;
+          const lbl = `${v} session${v !== 1 ? 's' : ''}`;
+          const tw  = lbl.length * 5.5 + 14;
+          const tx  = Math.min(Math.max(cx - tw / 2, pad.l), W - pad.r - tw);
+          return (
+            <g>
+              <rect x={tx} y={ty - 14} width={tw} height={18} rx="4"
+                    fill="var(--card)" stroke="var(--border)" strokeWidth="0.8" />
+              <text x={tx + tw / 2} y={ty - 2} textAnchor="middle"
+                    style={{ fill: 'var(--text)', fontSize: 9, fontWeight: 600 }}>
+                {lbl}
+              </text>
+            </g>
+          );
+        })()}
+
         {X_HOUR_LABELS.map(({ i, label }) => (
-          <text key={label} x={bX(i) + (barW - gap) / 2} y={H - 8} textAnchor="middle"
-                style={{ fill: 'var(--text-light)', fontSize: 9 }}>
+          <text key={label} x={bCx(i)} y={H - 8} textAnchor="middle"
+                style={{ fill: hoveredBar === i ? ACCENT : 'var(--text-light)', fontSize: 9, transition: 'fill 0.15s ease' }}>
             {label}
           </text>
         ))}
@@ -429,18 +496,20 @@ function ActiveUsersTab() {
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Activity by Hour</h3>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-light)' }}>Concurrent sessions throughout the day · today</p>
           </div>
-          <div className="flex flex-col gap-1.5 text-right">
-            <div className="flex items-center gap-2 justify-end">
-              <span className="text-xs" style={{ color: 'var(--text-light)' }}>Monthly peak avg</span>
-              <div className="w-6 border-t border-dashed" style={{ borderColor: GOLD }} />
+          {!(kpis?.hourly?.some(v => v > 0)) && (
+            <div className="flex flex-col gap-1.5 text-right">
+              <div className="flex items-center gap-2 justify-end">
+                <span className="text-xs" style={{ color: 'var(--text-light)' }}>Monthly peak avg</span>
+                <div className="w-6 border-t border-dashed" style={{ borderColor: GOLD }} />
+              </div>
+              <div className="flex items-center gap-2 justify-end">
+                <span className="text-xs" style={{ color: 'var(--text-light)' }}>Yearly peak avg</span>
+                <div className="w-6 border-t border-dashed" style={{ borderColor: PURPLE }} />
+              </div>
             </div>
-            <div className="flex items-center gap-2 justify-end">
-              <span className="text-xs" style={{ color: 'var(--text-light)' }}>Yearly peak avg</span>
-              <div className="w-6 border-t border-dashed" style={{ borderColor: PURPLE }} />
-            </div>
-          </div>
+          )}
         </div>
-        <HourlyChart />
+        <HourlyChart data={kpis?.hourly} />
       </div>
 
       {/* Engagement Trend */}
