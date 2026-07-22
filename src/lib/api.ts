@@ -45,6 +45,7 @@ export const api = {
     activeUserTrend:    (period: 'week' | 'month' | 'year') => request<TrendData>(`/analytics/active-users/trend?period=${period}`),
     activeUserTopUsers:  (limit = 10) => request<TopActiveUser[]>(`/analytics/active-users/top-users?limit=${limit}`),
     acquisitionKPIs:     () => request<AcquisitionKPIs>('/analytics/acquisition/kpis'),
+    acquisitionSignups:  () => request<AcquisitionSignups>('/analytics/acquisition/signups'),
   },
 
   moderation: {
@@ -138,6 +139,14 @@ export interface ProfileHealthData {
   patriarch:     { overall: number; signals: HealthSignal[] }
   muse:          { overall: number; signals: HealthSignal[] }
   constellation: { overall: number; signals: HealthSignal[] }
+}
+
+export interface AcquisitionSignups {
+  labels:           string[]
+  patriarchs:       number[]
+  muses:            number[]
+  constellations:   number[]
+  this_month_total: number
 }
 
 export interface AcquisitionKPIs {

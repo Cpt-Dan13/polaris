@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
-import type { ActiveUserKPIs, TrendData, TopActiveUser, AcquisitionKPIs } from '../lib/api';
+import type { ActiveUserKPIs, TrendData, TopActiveUser, AcquisitionKPIs, AcquisitionSignups } from '../lib/api';
 import {
   Users, TrendingUp, Activity, UserMinus, MapPin,
   Clock, Zap,
@@ -92,11 +92,6 @@ const TYPE_COLORS: Record<string, string> = { Patriarch: ACCENT, Muse: GOLD, Con
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-const acquisitionData = {
-  patriarchs:     [420, 390, 451, 480, 512, 498, 534, 581, 620, 644, 698, 731],
-  muses:          [680, 720, 755, 810, 892, 948,1020,1104,1198,1280,1354,1421],
-  constellations: [ 45,  52,  61,  78,  94, 103, 128, 142, 167, 189, 214, 241],
-};
 
 
 const retentionData = [
@@ -332,19 +327,35 @@ function TrendChart({ period, data, loading }: { period: Period; data: TrendData
   );
 }
 
-function AcquisitionChart() {
+function AcquisitionChart({ data, loading }: { data: AcquisitionSignups | null; loading: boolean }) {
   const W = 520, H = 180;
   const pad = { t: 16, r: 16, b: 36, l: 44 };
   const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
-  const maxVal = 1500, n = MONTHS.length;
   const bottom = pad.t + cH;
   const series = ['patriarchs', 'muses', 'constellations'] as const;
 
-  function toX(i: number) { return pad.l + (i / (n - 1)) * cW; }
-  function toY(v: number) { return pad.t + cH - (v / maxVal) * cH; }
-  function getPoints(data: number[]) { return data.map((v, i) => ({ x: toX(i), y: toY(v) })); }
+  if (loading) {
+    return <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span style={{ color: 'var(--text-light)', fontSize: 12 }}>Loading…</span>
+    </div>;
+  }
 
-  const yTicks = [0, 500, 1000, 1500];
+  const labels     = data?.labels         ?? [];
+  const seriesData = {
+    patriarchs:     data?.patriarchs     ?? [],
+    muses:          data?.muses          ?? [],
+    constellations: data?.constellations ?? [],
+  };
+  const n       = labels.length;
+  const allVals = [...seriesData.patriarchs, ...seriesData.muses, ...seriesData.constellations];
+  const hasData = allVals.some(v => v > 0);
+  const dataMax = Math.max(...allVals, 1);
+  const maxVal  = hasData ? Math.ceil(dataMax * 1.2 / 10) * 10 : 10;
+  const yTicks  = [0, Math.round(maxVal / 3), Math.round(maxVal * 2 / 3), maxVal];
+
+  function toX(i: number) { return pad.l + (i / Math.max(n - 1, 1)) * cW; }
+  function toY(v: number) { return pad.t + cH - (v / maxVal) * cH; }
+  function getPoints(arr: number[]) { return arr.map((v, i) => ({ x: toX(i), y: toY(v) })); }
 
   return (
     <div>
@@ -370,24 +381,30 @@ function AcquisitionChart() {
             <g key={t}>
               <line x1={pad.l} x2={W - pad.r} y1={toY(t)} y2={toY(t)} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="3,3" />
               <text x={pad.l - 6} y={toY(t) + 4} textAnchor="end" style={{ fill: 'var(--text-light)', fontSize: 9 }}>
-                {t === 0 ? '0' : `${t / 1000}k`}
+                {fmt(t)}
               </text>
             </g>
           ))}
-          {MONTHS.map((m, i) => (
+          {labels.map((m, i) => (
             <text key={m} x={toX(i)} y={H - 7} textAnchor="middle" style={{ fill: 'var(--text-light)', fontSize: 9 }}>{m}</text>
           ))}
+          {!hasData && (
+            <text x={W / 2} y={pad.t + cH / 2} textAnchor="middle" dominantBaseline="middle"
+                  style={{ fill: 'var(--text-light)', fontSize: 11, fontStyle: 'italic' }}>
+              No signups recorded yet
+            </text>
+          )}
           {series.map(key => (
-            <path key={`area-${key}`} d={smoothArea(getPoints(acquisitionData[key]), bottom)} fill={`url(#acq-grad-${key})`} />
+            <path key={`area-${key}`} d={smoothArea(getPoints(seriesData[key]), bottom)} fill={`url(#acq-grad-${key})`} opacity={hasData ? 1 : 0.15} />
           ))}
           {series.map(key => {
-            const pts  = getPoints(acquisitionData[key]);
+            const pts  = getPoints(seriesData[key]);
             const last = pts[pts.length - 1];
             return (
-              <g key={key}>
+              <g key={key} opacity={hasData ? 1 : 0.15}>
                 <path d={smoothCurve(pts)} fill="none" stroke={ACQ_COLORS[key]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill={ACQ_COLORS[key]} opacity="0.85" />)}
-                <circle cx={last.x} cy={last.y} r="5" fill={ACQ_COLORS[key]} />
+                {hasData && pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill={ACQ_COLORS[key]} opacity="0.85" />)}
+                {hasData && <circle cx={last.x} cy={last.y} r="5" fill={ACQ_COLORS[key]} />}
               </g>
             );
           })}
@@ -611,14 +628,20 @@ function ActiveUsersTab() {
 // ─── Tab: Acquisition & Retention ────────────────────────────────────────────
 
 function AcquisitionTab() {
-  const [kpis, setKpis]               = useState<AcquisitionKPIs | null>(null);
-  const [kpisLoading, setKpisLoading] = useState(true);
+  const [kpis, setKpis]                   = useState<AcquisitionKPIs | null>(null);
+  const [kpisLoading, setKpisLoading]     = useState(true);
+  const [signups, setSignups]             = useState<AcquisitionSignups | null>(null);
+  const [signupsLoading, setSignupsLoading] = useState(true);
 
   useEffect(() => {
     api.analytics.acquisitionKPIs()
       .then(setKpis)
       .catch(() => {})
       .finally(() => setKpisLoading(false));
+    api.analytics.acquisitionSignups()
+      .then(setSignups)
+      .catch(() => {})
+      .finally(() => setSignupsLoading(false));
   }, []);
 
   function fmtDelta(v: number, pp = false): string {
@@ -689,14 +712,22 @@ function AcquisitionTab() {
         <div className="flex items-start justify-between mb-1">
           <div>
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>New User Acquisition</h3>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-light)' }}>Monthly signups by profile type · Jan – Dec 2025</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-light)' }}>
+              {(() => {
+                const now   = new Date();
+                const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+                return `Monthly signups by profile type · ${start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} – ${now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+              })()}
+            </p>
           </div>
           <div className="text-right flex-shrink-0">
-            <div className="text-xl font-black" style={{ color: ACCENT }}>4,821</div>
+            <div className="text-xl font-black" style={{ color: ACCENT }}>
+              {signupsLoading ? '—' : fmt(signups?.this_month_total ?? 0)}
+            </div>
             <div className="text-xs" style={{ color: 'var(--text-light)' }}>this month</div>
           </div>
         </div>
-        <AcquisitionChart />
+        <AcquisitionChart data={signups} loading={signupsLoading} />
       </div>
 
       {/* Retention + Sources */}
