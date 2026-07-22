@@ -411,8 +411,9 @@ function ActiveUsersTab() {
   const [kpisLoading, setKpisLoading]   = useState(true);
   const [liveTrend, setLiveTrend]         = useState<TrendData | null>(null);
   const [trendLoading, setTrendLoading]   = useState(true);
-  const [topUsers, setTopUsers]           = useState<TopActiveUser[]>([]);
+  const [topUsers, setTopUsers]               = useState<TopActiveUser[]>([]);
   const [topUsersLoading, setTopUsersLoading] = useState(true);
+  const [hoveredRow, setHoveredRow]           = useState<number | null>(null);
 
   useEffect(() => {
     api.analytics.activeUserKPIs()
@@ -568,7 +569,16 @@ function ActiveUsersTab() {
           ) : topUsers.map((u, i) => {
             const typeColor = TYPE_COLORS[u.type] ?? 'var(--text-secondary)';
             return (
-              <div key={u.user_id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--bg)' }}>
+              <div key={u.user_id} className="flex items-center gap-3 p-3 rounded-lg"
+                   onMouseEnter={() => setHoveredRow(i)}
+                   onMouseLeave={() => setHoveredRow(null)}
+                   style={{
+                     background:  'var(--bg)',
+                     transform:   hoveredRow === i ? 'scale(1.02)' : 'scale(1)',
+                     boxShadow:   hoveredRow === i ? '0 2px 12px rgba(0,0,0,0.08)' : 'none',
+                     transition:  'transform 0.18s ease, box-shadow 0.18s ease',
+                     cursor:      'pointer',
+                   }}>
                 <span className="text-sm font-black w-5 text-center flex-shrink-0"
                       style={{ color: i < 3 ? RANK_COLORS[i] : 'var(--text-light)' }}>
                   {i + 1}
