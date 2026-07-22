@@ -251,9 +251,10 @@ export default function Subscriptions() {
       .then(setTrend).catch(() => setTrend(null)).finally(() => setTrendL(false));
   }, [period]);
 
-  const plans     = dist?.plans ?? [];
+  const plans     = dist?.plans     ?? [];
   const totalSubs = dist?.total_subs ?? 0;
   const totalMRR  = dist?.total_mrr  ?? 0;
+  const freeUsers = dist?.free_users ?? 0;
 
   const trendData  = trend;
   const netNew     = trendData ? sum(trendData.newSubs) - sum(trendData.cancels) : 0;
@@ -348,14 +349,18 @@ export default function Subscriptions() {
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>
-                          {plan.subs.toLocaleString()}
+                          {(plan.price === 0 ? freeUsers : plan.subs).toLocaleString()}
                         </span>
-                        <span className="text-xs ml-1.5" style={{ color: 'var(--text-light)' }}>{pct}%</span>
+                        {plan.price > 0 && (
+                          <span className="text-xs ml-1.5" style={{ color: 'var(--text-light)' }}>{pct}%</span>
+                        )}
                       </div>
                     </div>
-                    <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg)' }}>
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
-                    </div>
+                    {plan.price > 0 && (
+                      <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg)' }}>
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                      </div>
+                    )}
                     {plan.price > 0 && (
                       <div className="flex justify-between mt-1">
                         <span style={{ fontSize: 10, color: 'var(--text-light)' }}>MRR contribution</span>

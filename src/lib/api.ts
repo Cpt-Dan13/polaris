@@ -169,6 +169,7 @@ export interface PlanDistribution {
   plans:      PlanTier[]
   total_subs: number
   total_mrr:  number
+  free_users: number
 }
 
 export interface SubTrendData {
