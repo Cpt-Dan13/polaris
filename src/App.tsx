@@ -19,7 +19,6 @@ import SwipeAnalytics from './pages/SwipeAnalytics';
 import ProfileAnalytics from './pages/ProfileAnalytics';
 import ProfileInsights from './pages/ProfileInsights';
 import Growth from './pages/Growth';
-import ActiveUsers from './pages/ActiveUsers';
 import Subscriptions from './pages/Subscriptions';
 import Revenue from './pages/Revenue';
 import ChatAssessment from './pages/ChatAssessment';
@@ -35,7 +34,6 @@ function PageRenderer({ page }: { page: Page }) {
     case 'profile-analytics':   return <ProfileAnalytics />;
     case 'profile-insights':    return <ProfileInsights />;
     case 'growth':              return <Growth />;
-    case 'active-users':        return <ActiveUsers />;
     // Finance
     case 'subscriptions':       return <Subscriptions />;
     case 'revenue':             return <Revenue />;

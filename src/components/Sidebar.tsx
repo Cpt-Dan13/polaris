@@ -2,7 +2,7 @@
   LayoutDashboard, Bot, Clock,
   Users, Headphones, Star, Flag, Megaphone, Sparkles, Settings,
   ChevronRight, BarChart2, PieChart, TrendingDown,
-  TrendingUp, Radio, CreditCard, DollarSign, ShieldAlert, ClipboardList, LifeBuoy,
+  TrendingUp, CreditCard, DollarSign, ShieldAlert, ClipboardList, LifeBuoy,
 } from 'lucide-react';
 import type { Page } from '../types';
 
@@ -20,7 +20,6 @@ const navItems: NavItem[] = [
   { id: 'profile-analytics',   label: 'Profile Analytics',   icon: PieChart,        group: 'Analytics' },
   { id: 'profile-insights',    label: 'Profile Insights',    icon: TrendingDown,    group: 'Analytics' },
   { id: 'growth',              label: 'Growth',              icon: TrendingUp,      group: 'Analytics' },
-  { id: 'active-users',        label: 'Active Users',        icon: Radio,           group: 'Analytics' },
 
   { id: 'subscriptions',       label: 'Subscriptions',       icon: CreditCard,      group: 'Finance' },
   { id: 'revenue',             label: 'Revenue',             icon: DollarSign,      group: 'Finance' },

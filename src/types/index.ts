@@ -5,7 +5,6 @@ export type Page =
   | 'profile-analytics'
   | 'profile-insights'
   | 'growth'
-  | 'active-users'
   // Finance
   | 'subscriptions'
   | 'revenue'
