@@ -66,12 +66,16 @@ export const api = {
   },
 
   finance: {
-    summary:       () => request('/finance/subscriptions/summary'),
-    subscriptions: (params?: Record<string, string>) =>
+    summary:              () => request('/finance/subscriptions/summary'),
+    subscriptions:        (params?: Record<string, string>) =>
       request(`/finance/subscriptions${params ? `?${new URLSearchParams(params)}` : ''}`),
-    growth:        (days = 30) => request(`/finance/subscriptions/growth?days=${days}`),
-    churn:         (days = 30) => request(`/finance/subscriptions/churn?days=${days}`),
-    expiring:      (days = 7)  => request(`/finance/subscriptions/expiring?days=${days}`),
+    growth:               (days = 30) => request(`/finance/subscriptions/growth?days=${days}`),
+    churn:                (days = 30) => request(`/finance/subscriptions/churn?days=${days}`),
+    expiring:             (days = 7)  => request(`/finance/subscriptions/expiring?days=${days}`),
+    subscriptionKPIs:         () => request<SubKPIs>('/finance/subscriptions/kpis'),
+    subscriptionDistribution: () => request<PlanDistribution>('/finance/subscriptions/plan-distribution'),
+    subscriptionTrend:        (period: 'week' | 'month' | 'year') => request<SubTrendData>(`/finance/subscriptions/trend?period=${period}`),
+    subscriptionEvents:       (limit = 20) => request<SubEvent[]>(`/finance/subscriptions/recent-events?limit=${limit}`),
   },
 
   users: {
@@ -141,6 +145,48 @@ export interface ProfileHealthData {
   patriarch:     { overall: number; signals: HealthSignal[] }
   muse:          { overall: number; signals: HealthSignal[] }
   constellation: { overall: number; signals: HealthSignal[] }
+}
+
+export interface SubKPIs {
+  total_subscribers:       number
+  total_subscribers_delta: number
+  mrr:                     number
+  mrr_delta:               number
+  arpu:                    number
+  arpu_delta:              number
+  monthly_churn:           number
+  monthly_churn_delta:     number
+}
+
+export interface PlanTier {
+  tier:  string
+  price: number
+  subs:  number
+  mrr:   number
+}
+
+export interface PlanDistribution {
+  plans:      PlanTier[]
+  total_subs: number
+  total_mrr:  number
+}
+
+export interface SubTrendData {
+  labels:  string[]
+  newSubs: number[]
+  cancels: number[]
+}
+
+export type SubEventType = 'subscribed' | 'upgraded' | 'downgraded' | 'cancelled' | 'renewed' | 'reactivated'
+
+export interface SubEvent {
+  id:         string
+  name:       string
+  event_type: SubEventType
+  tier:       string | null
+  from_tier:  string | null
+  to_tier:    string | null
+  created_at: string
 }
 
 export interface MarketEntry {
