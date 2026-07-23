@@ -69,7 +69,7 @@ export const api = {
         request<ChatKPIs>('/moderation/chat/kpis'),
       riskDistribution: () =>
         request<ChatRiskDistribution>('/moderation/chat/risk-distribution'),
-      flags:           (params?: { status?: string; severity?: string; limit?: number; offset?: number }) => {
+      flags:           (params?: { status?: string; severity?: string; detection_source?: string; limit?: number; offset?: number }) => {
         const q = params ? `?${new URLSearchParams(
           Object.fromEntries(
             Object.entries(params)
@@ -364,10 +364,11 @@ export interface ChatFlag {
   confidence:            number | null
   flagged_terms:         string[]
   status:                ChatFlagStatus
+  detection_source:      string | null
   tech_review_requested: boolean
   created_at:            string
-  sender:   { id: string; first_name: string; last_name: string | null } | null
-  receiver: { id: string; first_name: string; last_name: string | null } | null
+  sender:   { id: string; first_name: string; last_name: string | null; photo_url?: string | null } | null
+  receiver: { id: string; first_name: string; last_name: string | null; photo_url?: string | null } | null
   snippet:  string | null
 }
 

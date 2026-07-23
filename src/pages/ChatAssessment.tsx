@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { MessageSquare, ShieldAlert, CheckCircle, Clock, Code2, ChevronDown } from 'lucide-react';
+import { MessageSquare, ShieldAlert, CheckCircle, Clock, Code2, ChevronDown, ChevronLeft, ChevronRight, Hash } from 'lucide-react';
 import { api, type ChatFlag, type ChatFlagAction, type ChatKPIs, type ChatRiskDistribution } from '../lib/api';
 
 const ACCENT = '#e94560';
@@ -76,6 +76,55 @@ function displayName(
   return `${person.first_name}${last}`;
 }
 
+function fullName(
+  person: { first_name: string; last_name: string | null } | null,
+  fallback = 'Unknown',
+): string {
+  if (!person) return fallback;
+  return [person.first_name, person.last_name].filter(Boolean).join(' ');
+}
+
+function PersonChip({
+  person,
+  accent = false,
+}: {
+  person: { first_name: string; last_name: string | null; photo_url?: string | null } | null;
+  accent?: boolean;
+}) {
+  const name     = fullName(person);
+  const initials = name !== 'Unknown'
+    ? name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    : '?';
+
+  return (
+    <span className="flex items-center gap-1.5 flex-shrink-0">
+      {person?.photo_url ? (
+        <img
+          src={person.photo_url}
+          alt={name}
+          className="flex-shrink-0 object-cover rounded-full"
+          style={{ width: 20, height: 20 }}
+        />
+      ) : (
+        <span
+          className="flex-shrink-0 rounded-full flex items-center justify-center font-bold"
+          style={{
+            width: 20, height: 20,
+            fontSize: 8,
+            background: accent ? `${ACCENT}25` : 'var(--border)',
+            color:      accent ? ACCENT : 'var(--text-secondary)',
+          }}>
+          {initials}
+        </span>
+      )}
+      <span className="text-xs font-semibold"
+            style={{ color: accent ? ACCENT : 'var(--text-secondary)' }}>
+        {name}
+      </span>
+    </span>
+  );
+}
+
 function fmtInt(n: number): string {
   return n.toLocaleString();
 }
@@ -89,19 +138,27 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string }> 
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const KW_PAGE_SIZE = 10;
+
 export default function ChatAssessment() {
   const [kpis,         setKpis]         = useState<ChatKPIs | null>(null);
   const [distribution, setDistribution] = useState<ChatRiskDistribution | null>(null);
   const [flags,        setFlags]        = useState<ChatFlag[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState<string | null>(null);
-  const [actioning,    setActioning]    = useState<string | null>(null);  // flag ID being acted on
+  const [actioning,    setActioning]    = useState<string | null>(null);
 
   const [filter,       setFilter]       = useState<'all' | Severity>('all');
   const [hoveredCat,   setHoveredCat]   = useState<string | null>(null);
   const [resolvedOpen, setResolvedOpen] = useState(false);
 
-  // Load all data in parallel
+  // Keyword history state
+  const [kwFlags,   setKwFlags]   = useState<ChatFlag[]>([]);
+  const [kwCount,   setKwCount]   = useState(0);
+  const [kwPage,    setKwPage]    = useState(0);
+  const [kwLoading, setKwLoading] = useState(false);
+
+  // Main queue — user_report flags only (keyword flags have their own section)
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -109,7 +166,7 @@ export default function ChatAssessment() {
       const [kpisData, distData, flagsData] = await Promise.all([
         api.moderation.chat.kpis(),
         api.moderation.chat.riskDistribution(),
-        api.moderation.chat.flags({ limit: 100 }),
+        api.moderation.chat.flags({ detection_source: 'user_report', limit: 100 }),
       ]);
       setKpis(kpisData);
       setDistribution(distData);
@@ -121,7 +178,26 @@ export default function ChatAssessment() {
     }
   }, []);
 
+  // Keyword history — separate paginated fetch
+  const loadKeywordFlags = useCallback(async (page: number) => {
+    setKwLoading(true);
+    try {
+      const result = await api.moderation.chat.flags({
+        detection_source: 'keyword',
+        limit:  KW_PAGE_SIZE,
+        offset: page * KW_PAGE_SIZE,
+      });
+      setKwFlags(result.data);
+      setKwCount(result.count);
+    } catch {
+      // silent — keyword section is supplemental
+    } finally {
+      setKwLoading(false);
+    }
+  }, []);
+
   useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { loadKeywordFlags(kwPage); }, [loadKeywordFlags, kwPage]);
 
   const handleAction = async (flagId: string, action: ChatFlagAction) => {
     setActioning(flagId);
@@ -560,6 +636,167 @@ export default function ChatAssessment() {
               })}
             </div>
           </div>
+        )}
+      </div>
+
+      {/* ── Flagged Keyword History ───────────────────────────────────────── */}
+      <div className="card p-5">
+
+        {/* Section header */}
+        <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+                 style={{ background: 'rgba(234,179,8,0.12)' }}>
+              <Hash size={14} style={{ color: GOLD }} />
+            </div>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
+              Flagged Keyword History
+            </h3>
+
+            {/* Live badge */}
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
+                  style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80' }}>
+              <span className="relative flex" style={{ width: 8, height: 8 }}>
+                <span className="animate-ping absolute inline-flex rounded-full"
+                      style={{ width: 8, height: 8, background: '#4ade80', opacity: 0.6 }} />
+                <span className="relative inline-flex rounded-full"
+                      style={{ width: 8, height: 8, background: '#4ade80' }} />
+              </span>
+              Live
+            </span>
+
+            {kwCount > 0 && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(234,179,8,0.12)', color: GOLD }}>
+                {kwCount} total
+              </span>
+            )}
+          </div>
+          <span className="text-xs" style={{ color: 'var(--text-light)' }}>
+            Auto-detected · view only
+          </span>
+        </div>
+
+        <p className="text-xs mb-4" style={{ color: 'var(--text-light)' }}>
+          Messages automatically flagged by the keyword detection system. These are not user reports
+          and require no immediate action unless manually escalated.
+        </p>
+
+        {kwLoading && kwFlags.length === 0 ? (
+          <div className="py-10 text-center text-xs" style={{ color: 'var(--text-light)' }}>
+            Loading keyword flags…
+          </div>
+        ) : kwCount === 0 ? (
+          <div className="py-10 text-center text-xs" style={{ color: 'var(--text-light)' }}>
+            No auto-detected keyword flags on record
+          </div>
+        ) : (
+          <>
+            <div className="space-y-2">
+              {kwFlags.map(flag => {
+                const sm = STATUS_META[flag.status] ?? STATUS_META.pending;
+                return (
+                  <div key={flag.id}
+                       className="p-3 rounded-xl"
+                       style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+
+                    {/* Top row: keyword chips + status + time */}
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <span className="text-xs font-mono" style={{ color: 'var(--text-light)' }}>
+                        {shortId(flag.id)}
+                      </span>
+                      {(flag.flagged_terms ?? []).map(term => (
+                        <span key={term}
+                              className="text-xs font-semibold px-2 py-0.5 rounded"
+                              style={{
+                                background: 'rgba(234,179,8,0.15)',
+                                color: GOLD,
+                                fontFamily: 'monospace',
+                              }}>
+                          #{term}
+                        </span>
+                      ))}
+                      <span className="ml-auto text-xs font-semibold px-1.5 py-0.5 rounded"
+                            style={{ background: sm.bg, color: sm.color }}>
+                        {sm.label}
+                      </span>
+                      <span className="text-xs" style={{ color: 'var(--text-light)' }}>
+                        {relTime(flag.created_at)}
+                      </span>
+                    </div>
+
+                    {/* Sender → Recipient row */}
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <PersonChip person={flag.sender} accent />
+                      <span className="text-xs" style={{ color: 'var(--text-light)' }}>→</span>
+                      <PersonChip person={flag.receiver} />
+                      {flag.confidence != null && (
+                        <span className="text-xs font-bold ml-1"
+                              style={{
+                                color: flag.confidence >= 85
+                                  ? SEV_COLOR.critical
+                                  : flag.confidence >= 70
+                                    ? SEV_COLOR.high
+                                    : SEV_COLOR.medium,
+                              }}>
+                          {flag.confidence}%
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Message snippet */}
+                    {flag.snippet && (
+                      <div className="px-2.5 pt-2 pb-2"
+                           style={{
+                             background:  'var(--card)',
+                             borderLeft:  `3px solid ${GOLD}80`,
+                             borderRadius: 6,
+                           }}>
+                        <div className="flex items-center gap-1 mb-1">
+                          <MessageSquare size={10} style={{ color: 'var(--text-light)', flexShrink: 0 }} />
+                          <span className="text-xs uppercase tracking-wide" style={{ color: 'var(--text-light)', fontSize: 10 }}>
+                            Message
+                          </span>
+                        </div>
+                        <span className="text-xs italic" style={{ color: 'var(--text-secondary)' }}>
+                          {flag.snippet}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination */}
+            {kwCount > KW_PAGE_SIZE && (
+              <div className="flex items-center justify-center gap-3 mt-4 pt-4"
+                   style={{ borderTop: '1px solid var(--border)' }}>
+                <button
+                  disabled={kwPage === 0 || kwLoading}
+                  onClick={() => setKwPage(p => p - 1)}
+                  className="w-7 h-7 rounded flex items-center justify-center transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ background: 'var(--bg)', color: 'var(--text-secondary)' }}>
+                  <ChevronLeft size={14} />
+                </button>
+
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                  Page {kwPage + 1} of {Math.ceil(kwCount / KW_PAGE_SIZE)}
+                  <span className="font-normal ml-1" style={{ color: 'var(--text-light)' }}>
+                    · {kwCount} entries
+                  </span>
+                </span>
+
+                <button
+                  disabled={(kwPage + 1) * KW_PAGE_SIZE >= kwCount || kwLoading}
+                  onClick={() => setKwPage(p => p + 1)}
+                  className="w-7 h-7 rounded flex items-center justify-center transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ background: 'var(--bg)', color: 'var(--text-secondary)' }}>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
