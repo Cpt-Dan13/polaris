@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MessageSquare, ShieldAlert, CheckCircle, Clock, Code2, ChevronDown } from 'lucide-react';
+import { api, type ChatFlag, type ChatFlagAction, type ChatKPIs, type ChatRiskDistribution } from '../lib/api';
 
 const ACCENT = '#e94560';
 const GREEN  = '#4caf50';
@@ -27,10 +28,10 @@ const CATEGORY_META: Record<string, { label: string; color: string }> = {
 type Severity = 'critical' | 'high' | 'medium' | 'low';
 
 const SEV_COLOR: Record<Severity, string> = {
-  critical: '#b91c1c',   // Dark Red
-  high:     '#ef4444',   // Light Red
-  medium:   '#f97316',   // Orange
-  low:      '#eab308',   // Yellow
+  critical: '#b91c1c',
+  high:     '#ef4444',
+  medium:   '#f97316',
+  low:      '#eab308',
 };
 
 const SEV_BG: Record<Severity, string> = {
@@ -40,129 +41,46 @@ const SEV_BG: Record<Severity, string> = {
   low:      'rgba(234,179,8,0.12)',
 };
 
-// ─── KPI mock data ────────────────────────────────────────────────────────────
+const SEV_ORDER: Severity[] = ['critical', 'high', 'medium', 'low'];
 
-const kpis: {
-  label: string; value: string; delta: string; positive: boolean; icon: React.ElementType
-}[] = [
-  { label: 'Monitored Today', value: '4,382', delta: '+12.3%', positive: true,  icon: MessageSquare },
-  { label: 'Flagged Rate',    value: '4.2%',  delta: '+0.6pp', positive: false, icon: ShieldAlert   },
-  { label: 'Auto-Approved',   value: '71.8%', delta: '−4.1pp', positive: false, icon: CheckCircle   },
-  { label: 'Awaiting Review', value: '73',    delta: '+21',    positive: false, icon: Clock         },
+// Category ordering for the stacked bar (critical risk → lower risk)
+const CATEGORY_ORDER = [
+  'underage_minor', 'physical_self_harm', 'terrorism_violence',
+  'harassment', 'solicitation', 'explicit_content',
+  'spam', 'potential_scam', 'community_guideline',
 ];
 
-// Ordered: Critical → High → Medium → Low
-const RISK_TYPES: { category: string; count: number }[] = [
-  { category: 'underage_minor',      count: 6  },
-  { category: 'physical_self_harm',  count: 3  },
-  { category: 'terrorism_violence',  count: 2  },
-  { category: 'harassment',          count: 59 },
-  { category: 'solicitation',        count: 13 },
-  { category: 'explicit_content',    count: 39 },
-  { category: 'spam',                count: 34 },
-  { category: 'potential_scam',      count: 8  },
-  { category: 'community_guideline', count: 21 },
-];
-const TOTAL_FLAGGED = RISK_TYPES.reduce((a, r) => a + r.count, 0);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// ─── Flagged Conversations mock data ──────────────────────────────────────────
-
-type ConvStatus = 'pending' | 'approved' | 'escalated' | 'banned';
-
-interface FlaggedConv {
-  id:         string;
-  sender:     string;
-  recipient:  string;
-  category:   string;
-  severity:   Severity;
-  confidence: number;
-  snippet:    string;
-  time:       string;
-  status:     ConvStatus;
+function relTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1)  return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  const rem = mins % 60;
+  if (hrs < 24)  return rem > 0 ? `${hrs}h ${rem}m ago` : `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
-const INITIAL_CONVOS: FlaggedConv[] = [
-  {
-    id: 'FLG-0183', sender: 'anon_7741',  recipient: 'Sofia M.',
-    category: 'underage_minor',     severity: 'critical', confidence: 96,
-    snippet: '"i\'m actually only 15 but i look older so don\'t worry about it..."',
-    time: '8m ago', status: 'pending',
-  },
-  {
-    id: 'FLG-0181', sender: 'marcus_w',   recipient: 'Isla S.',
-    category: 'harassment',         severity: 'high',     confidence: 94,
-    snippet: '"if you don\'t reply i swear i\'ll find where you live..."',
-    time: '14m ago', status: 'pending',
-  },
-  {
-    id: 'FLG-0179', sender: 'ryder_99',   recipient: 'Elena R.',
-    category: 'terrorism_violence', severity: 'critical', confidence: 91,
-    snippet: '"i have connections that can make your life disappear, don\'t test me..."',
-    time: '29m ago', status: 'pending',
-  },
-  {
-    id: 'FLG-0175', sender: 'anon_9231',  recipient: 'Lyra B.',
-    category: 'solicitation',       severity: 'high',     confidence: 88,
-    snippet: '"I can pay you $200 for your personal number and social media..."',
-    time: '47m ago', status: 'pending',
-  },
-  {
-    id: 'FLG-0172', sender: 'user_2281',  recipient: 'Mara K.',
-    category: 'physical_self_harm', severity: 'critical', confidence: 89,
-    snippet: '"i don\'t see the point anymore, I\'ve been thinking about hurting myself..."',
-    time: '1h 3m ago', status: 'pending',
-  },
-  {
-    id: 'FLG-0168', sender: 'james_ok',   recipient: 'Aurora S.',
-    category: 'explicit_content',   severity: 'medium',   confidence: 79,
-    snippet: '"send me a [explicit] pic right now or I\'m unmatching you..."',
-    time: '1h 22m ago', status: 'pending',
-  },
-  {
-    id: 'FLG-0155', sender: 'mike_v33',   recipient: 'Nina T.',
-    category: 'harassment',         severity: 'high',     confidence: 83,
-    snippet: '"you\'re ugly anyway, no wonder you\'re alone on an app like this..."',
-    time: '2h ago', status: 'escalated',
-  },
-  {
-    id: 'FLG-0148', sender: 'alex_cr',    recipient: 'Cleo R.',
-    category: 'potential_scam',     severity: 'medium',   confidence: 74,
-    snippet: '"I\'m a crypto investor, send me your bank details and I\'ll triple..."',
-    time: '2h 31m ago', status: 'pending',
-  },
-  {
-    id: 'FLG-0143', sender: 'kyle_09',    recipient: 'Aurora S.',
-    category: 'spam',               severity: 'medium',   confidence: 62,
-    snippet: '"check out my website for the best deals, exclusive offer just for..."',
-    time: '2h 44m ago', status: 'approved',
-  },
-  {
-    id: 'FLG-0139', sender: 'priya_m',    recipient: 'James K.',
-    category: 'community_guideline', severity: 'low',     confidence: 54,
-    snippet: '"tbh i\'m not really here for dating, just trying to grow my instagram following..."',
-    time: '3h 12m ago', status: 'pending',
-  },
-  {
-    id: 'FLG-0131', sender: 'coach_dan',  recipient: 'Mira L.',
-    category: 'community_guideline', severity: 'low',     confidence: 58,
-    snippet: '"I run a mindset coaching program, I\'d love to tell you more about it..."',
-    time: '3h 55m ago', status: 'pending',
-  },
-  {
-    id: 'FLG-0124', sender: 'user_5502',  recipient: 'Cleo R.',
-    category: 'community_guideline', severity: 'low',     confidence: 46,
-    snippet: '"just to be transparent, we\'re actually two friends sharing this profile together..."',
-    time: '4h 18m ago', status: 'pending',
-  },
-  {
-    id: 'FLG-0117', sender: 'oliver_f',   recipient: 'Nadia W.',
-    category: 'community_guideline', severity: 'low',     confidence: 51,
-    snippet: '"my main profile photo is from a shoot, the other pics are really me though lol..."',
-    time: '5h 2m ago', status: 'approved',
-  },
-];
+function shortId(id: string): string {
+  return `FLG-${id.replace(/-/g, '').slice(-4).toUpperCase()}`;
+}
 
-const STATUS_META: Record<ConvStatus, { label: string; color: string; bg: string }> = {
+function displayName(
+  person: { first_name: string; last_name: string | null } | null,
+  fallback = 'Unknown',
+): string {
+  if (!person) return fallback;
+  const last = person.last_name ? ` ${person.last_name[0]}.` : '';
+  return `${person.first_name}${last}`;
+}
+
+function fmtInt(n: number): string {
+  return n.toLocaleString();
+}
+
+const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
   pending:   { label: 'Pending',   color: GOLD,   bg: `${GOLD}20`             },
   approved:  { label: 'Approved',  color: GREEN,  bg: 'rgba(76,175,80,0.12)' },
   escalated: { label: 'Escalated', color: PURPLE, bg: `${PURPLE}18`           },
@@ -172,24 +90,131 @@ const STATUS_META: Record<ConvStatus, { label: string; color: string; bg: string
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ChatAssessment() {
-  const [convos, setConvos]         = useState<FlaggedConv[]>(INITIAL_CONVOS);
-  const [filter, setFilter]         = useState<'all' | Severity>('all');
-  const [hoveredCat, setHoveredCat] = useState<string | null>(null);
+  const [kpis,         setKpis]         = useState<ChatKPIs | null>(null);
+  const [distribution, setDistribution] = useState<ChatRiskDistribution | null>(null);
+  const [flags,        setFlags]        = useState<ChatFlag[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState<string | null>(null);
+  const [actioning,    setActioning]    = useState<string | null>(null);  // flag ID being acted on
+
+  const [filter,       setFilter]       = useState<'all' | Severity>('all');
+  const [hoveredCat,   setHoveredCat]   = useState<string | null>(null);
   const [resolvedOpen, setResolvedOpen] = useState(false);
 
-  const act = (id: string, status: ConvStatus) =>
-    setConvos(prev => prev.map(c => c.id === id ? { ...c, status } : c));
+  // Load all data in parallel
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [kpisData, distData, flagsData] = await Promise.all([
+        api.moderation.chat.kpis(),
+        api.moderation.chat.riskDistribution(),
+        api.moderation.chat.flags({ limit: 100 }),
+      ]);
+      setKpis(kpisData);
+      setDistribution(distData);
+      setFlags(flagsData.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load chat assessment data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const filtered  = filter === 'all' ? convos : convos.filter(c => c.severity === filter);
-  const pending   = filtered.filter(c => c.status === 'pending');
-  const resolved  = filtered.filter(c => c.status !== 'pending');
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const handleAction = async (flagId: string, action: ChatFlagAction) => {
+    setActioning(flagId);
+    try {
+      await api.moderation.chat.action(flagId, action);
+
+      if (action === 'tech_review') {
+        // Mark tech review requested on the local flag (status stays the same)
+        setFlags(prev => prev.map(f =>
+          f.id === flagId ? { ...f, tech_review_requested: true } : f
+        ));
+      } else {
+        const newStatus = action === 'approve'
+          ? 'approved' as const
+          : action === 'escalate'
+            ? 'escalated' as const
+            : 'banned' as const;
+        setFlags(prev => prev.map(f =>
+          f.id === flagId ? { ...f, status: newStatus } : f
+        ));
+      }
+    } catch (e) {
+      console.error('Action failed:', e);
+    } finally {
+      setActioning(null);
+    }
+  };
+
+  // Derive display data
+  const sortedDist = distribution
+    ? CATEGORY_ORDER
+        .map(cat => ({
+          category: cat,
+          count: distribution.by_category.find(b => b.category === cat)?.count ?? 0,
+        }))
+        .filter(r => r.count > 0)
+    : [];
+  const distTotal = sortedDist.reduce((a, r) => a + r.count, 0);
+
+  const filtered = filter === 'all'
+    ? flags
+    : flags.filter(f => f.severity === filter);
+  const pending  = filtered.filter(f => f.status === 'pending');
+  const resolved = filtered.filter(f => f.status !== 'pending');
+
+  // KPI pills config
+  const kpiPills = kpis ? [
+    {
+      label:    'Monitored Today',
+      value:    fmtInt(kpis.monitored_today),
+      icon:     MessageSquare,
+    },
+    {
+      label:    'Flagged Rate',
+      value:    `${kpis.flag_rate.toFixed(1)}%`,
+      icon:     ShieldAlert,
+    },
+    {
+      label:    'Auto-Approved',
+      value:    `${kpis.auto_approved_rate.toFixed(1)}%`,
+      icon:     CheckCircle,
+    },
+    {
+      label:    'Awaiting Review',
+      value:    fmtInt(kpis.awaiting_review),
+      icon:     Clock,
+    },
+  ] : null;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-sm" style={{ color: 'var(--text-light)' }}>Loading chat assessment…</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-sm" style={{ color: RED }}>{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
 
       {/* KPI Pills */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {kpis.map(k => {
+        {(kpiPills ?? []).map(k => {
           const Icon = k.icon;
           return (
             <div key={k.label} className="card p-4">
@@ -198,13 +223,6 @@ export default function ChatAssessment() {
                      style={{ background: `${ACCENT}15` }}>
                   <Icon size={15} style={{ color: ACCENT }} />
                 </div>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                      style={{
-                        background: k.positive ? 'rgba(76,175,80,0.12)' : 'rgba(244,67,54,0.12)',
-                        color:      k.positive ? GREEN : RED,
-                      }}>
-                  {k.delta}
-                </span>
               </div>
               <div className="text-2xl font-black" style={{ color: 'var(--text)' }}>{k.value}</div>
               <div className="text-xs mt-0.5" style={{ color: 'var(--text-light)' }}>{k.label}</div>
@@ -214,74 +232,78 @@ export default function ChatAssessment() {
       </div>
 
       {/* Risk Distribution */}
-      <div className="card p-5">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>
-          Risk Distribution —{' '}
-          <span style={{ color: 'var(--text-light)', fontWeight: 400 }}>{TOTAL_FLAGGED} flagged today</span>
-        </h3>
+      {distTotal > 0 && (
+        <div className="card p-5">
+          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>
+            Risk Distribution —{' '}
+            <span style={{ color: 'var(--text-light)', fontWeight: 400 }}>{distTotal} flagged today</span>
+          </h3>
 
-        {/* Stacked bar — Critical first, interactive */}
-        <div className="flex h-6 gap-px mb-5">
-          {RISK_TYPES.map((r, i, arr) => {
-            const meta    = CATEGORY_META[r.category];
-            const isFirst = i === 0;
-            const isLast  = i === arr.length - 1;
-            const isHot   = hoveredCat === r.category;
-            const isDim   = hoveredCat !== null && !isHot;
-            return (
-              <div
-                key={r.category}
-                title={`${meta.label}: ${r.count}`}
-                onMouseEnter={() => setHoveredCat(r.category)}
-                onMouseLeave={() => setHoveredCat(null)}
-                style={{
-                  width:        `${(r.count / TOTAL_FLAGGED * 100).toFixed(1)}%`,
-                  background:   meta.color,
-                  minWidth:     r.count > 0 ? 2 : 0,
-                  borderRadius: isFirst ? '6px 0 0 6px' : isLast ? '0 6px 6px 0' : 0,
-                  transform:    isHot ? 'scaleY(1.45)' : 'scaleY(1)',
-                  filter:       isDim ? 'brightness(0.5) saturate(0.5)' : 'none',
-                  transition:   'transform 0.18s ease, filter 0.18s ease',
-                  cursor:       'default',
-                }}
-              />
-            );
-          })}
-        </div>
+          {/* Stacked bar */}
+          <div className="flex h-6 gap-px mb-5">
+            {sortedDist.map((r, i, arr) => {
+              const meta    = CATEGORY_META[r.category];
+              if (!meta) return null;
+              const isFirst = i === 0;
+              const isLast  = i === arr.length - 1;
+              const isHot   = hoveredCat === r.category;
+              const isDim   = hoveredCat !== null && !isHot;
+              return (
+                <div
+                  key={r.category}
+                  title={`${meta.label}: ${r.count}`}
+                  onMouseEnter={() => setHoveredCat(r.category)}
+                  onMouseLeave={() => setHoveredCat(null)}
+                  style={{
+                    width:        `${(r.count / distTotal * 100).toFixed(1)}%`,
+                    background:   meta.color,
+                    minWidth:     r.count > 0 ? 2 : 0,
+                    borderRadius: isFirst ? '6px 0 0 6px' : isLast ? '0 6px 6px 0' : 0,
+                    transform:    isHot ? 'scaleY(1.45)' : 'scaleY(1)',
+                    filter:       isDim ? 'brightness(0.5) saturate(0.5)' : 'none',
+                    transition:   'transform 0.18s ease, filter 0.18s ease',
+                    cursor:       'default',
+                  }}
+                />
+              );
+            })}
+          </div>
 
-        {/* Legend — horizontal flex-wrap */}
-        <div className="flex flex-wrap gap-x-5 gap-y-2.5">
-          {RISK_TYPES.map(r => {
-            const meta  = CATEGORY_META[r.category];
-            const isHot = hoveredCat === r.category;
-            const isDim = hoveredCat !== null && !isHot;
-            return (
-              <div
-                key={r.category}
-                className="flex items-center gap-2 cursor-default"
-                onMouseEnter={() => setHoveredCat(r.category)}
-                onMouseLeave={() => setHoveredCat(null)}
-                style={{ opacity: isDim ? 0.35 : 1, transition: 'opacity 0.18s ease' }}
-              >
-                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                     style={{
-                       background: meta.color,
-                       transform:  isHot ? 'scale(1.4)' : 'scale(1)',
-                       transition: 'transform 0.18s ease',
-                     }} />
-                <span className="text-xs font-medium"
-                      style={{ color: isHot ? 'var(--text)' : 'var(--text-secondary)', transition: 'color 0.18s ease' }}>
-                  {meta.label}
-                </span>
-                <span className="text-xs font-bold" style={{ color: 'var(--text)' }}>{r.count}</span>
-                <span className="text-xs" style={{ color: 'var(--text-light)' }}>
-                  ({(r.count / TOTAL_FLAGGED * 100).toFixed(0)}%)
-                </span>
-              </div>
-            );
-          })}
+          {/* Legend */}
+          <div className="flex flex-wrap gap-x-5 gap-y-2.5">
+            {sortedDist.map(r => {
+              const meta  = CATEGORY_META[r.category];
+              if (!meta) return null;
+              const isHot = hoveredCat === r.category;
+              const isDim = hoveredCat !== null && !isHot;
+              return (
+                <div
+                  key={r.category}
+                  className="flex items-center gap-2 cursor-default"
+                  onMouseEnter={() => setHoveredCat(r.category)}
+                  onMouseLeave={() => setHoveredCat(null)}
+                  style={{ opacity: isDim ? 0.35 : 1, transition: 'opacity 0.18s ease' }}
+                >
+                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                       style={{
+                         background: meta.color,
+                         transform:  isHot ? 'scale(1.4)' : 'scale(1)',
+                         transition: 'transform 0.18s ease',
+                       }} />
+                  <span className="text-xs font-medium"
+                        style={{ color: isHot ? 'var(--text)' : 'var(--text-secondary)', transition: 'color 0.18s ease' }}>
+                    {meta.label}
+                  </span>
+                  <span className="text-xs font-bold" style={{ color: 'var(--text)' }}>{r.count}</span>
+                  <span className="text-xs" style={{ color: 'var(--text-light)' }}>
+                    ({(r.count / distTotal * 100).toFixed(0)}%)
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Flagged Conversations */}
       <div className="card p-5">
@@ -289,7 +311,6 @@ export default function ChatAssessment() {
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Flagged Conversations</h3>
 
-            {/* Resolved dropdown toggle */}
             {resolved.length > 0 && (
               <button
                 onClick={() => setResolvedOpen(o => !o)}
@@ -312,7 +333,7 @@ export default function ChatAssessment() {
 
           {/* Severity filter */}
           <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--bg)' }}>
-            {(['all', 'critical', 'high', 'medium', 'low'] as const).map(f => {
+            {(['all', ...SEV_ORDER] as const).map(f => {
               const active = filter === f;
               const color  = f === 'all' ? ACCENT : SEV_COLOR[f as Severity];
               return (
@@ -342,92 +363,128 @@ export default function ChatAssessment() {
             </div>
           )}
 
-          {pending.map(c => {
-            const sm      = STATUS_META[c.status];
-            const catMeta = CATEGORY_META[c.category] ?? { label: c.category, color: ACCENT };
-            const needsTechReview = c.severity === 'high' || c.severity === 'critical';
+          {pending.map(flag => {
+            const sev         = (flag.severity ?? 'low') as Severity;
+            const sm          = STATUS_META[flag.status] ?? STATUS_META.pending;
+            const catMeta     = flag.category ? (CATEGORY_META[flag.category] ?? { label: flag.category, color: ACCENT }) : null;
+            const needsTech   = sev === 'high' || sev === 'critical';
+            const isActioning = actioning === flag.id;
 
             return (
-              <div key={c.id} className="p-4 rounded-xl"
+              <div key={flag.id} className="p-4 rounded-xl"
                    style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
 
                 {/* Header row */}
                 <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-mono font-bold" style={{ color: 'var(--text-secondary)' }}>
-                      {c.id}
+                      {shortId(flag.id)}
                     </span>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full capitalize"
-                          style={{ background: SEV_BG[c.severity], color: SEV_COLOR[c.severity] }}>
-                      {c.severity}
+                          style={{ background: SEV_BG[sev], color: SEV_COLOR[sev] }}>
+                      {sev}
                     </span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                          style={{ background: `${catMeta.color}18`, color: catMeta.color }}>
-                      {catMeta.label}
-                    </span>
+                    {catMeta && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                            style={{ background: `${catMeta.color}18`, color: catMeta.color }}>
+                        {catMeta.label}
+                      </span>
+                    )}
+                    {!catMeta && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                            style={{ background: 'var(--border)', color: 'var(--text-light)' }}>
+                        Unclassified
+                      </span>
+                    )}
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                           style={{ background: sm.bg, color: sm.color }}>
                       {sm.label}
                     </span>
+                    {flag.tech_review_requested && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                            style={{ background: `${INDIGO}20`, color: INDIGO }}>
+                        Tech Review Req.
+                      </span>
+                    )}
                   </div>
-                  <span className="text-xs" style={{ color: 'var(--text-light)' }}>{c.time}</span>
+                  <span className="text-xs" style={{ color: 'var(--text-light)' }}>
+                    {relTime(flag.created_at)}
+                  </span>
                 </div>
 
                 {/* Metadata grid */}
                 <div className="grid grid-cols-3 gap-3 mb-3">
                   <div>
                     <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)' }}>Sender</div>
-                    <div className="text-sm font-semibold" style={{ color: ACCENT }}>@{c.sender}</div>
+                    <div className="text-sm font-semibold" style={{ color: ACCENT }}>
+                      @{flag.sender ? flag.sender.first_name.toLowerCase() : 'unknown'}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)' }}>Recipient</div>
-                    <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{c.recipient}</div>
+                    <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
+                      {displayName(flag.receiver)}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)' }}>AI Confidence</div>
-                    <div className="text-sm font-bold"
-                         style={{
-                           color: c.confidence >= 85
-                             ? SEV_COLOR.critical
-                             : c.confidence >= 70
-                               ? SEV_COLOR.high
-                               : SEV_COLOR.medium,
-                         }}>
-                      {c.confidence}%
-                    </div>
+                    {flag.confidence != null ? (
+                      <div className="text-sm font-bold"
+                           style={{
+                             color: flag.confidence >= 85
+                               ? SEV_COLOR.critical
+                               : flag.confidence >= 70
+                                 ? SEV_COLOR.high
+                                 : SEV_COLOR.medium,
+                           }}>
+                        {flag.confidence}%
+                      </div>
+                    ) : (
+                      <div className="text-sm" style={{ color: 'var(--text-light)' }}>—</div>
+                    )}
                   </div>
                 </div>
 
                 {/* Message snippet */}
-                <div className="p-2.5 rounded-lg mb-3 text-xs italic"
-                     style={{
-                       background: 'var(--card)',
-                       color: 'var(--text-secondary)',
-                       borderLeft: `3px solid ${SEV_COLOR[c.severity]}`,
-                     }}>
-                  {c.snippet}
-                </div>
+                {flag.snippet && (
+                  <div className="p-2.5 rounded-lg mb-3 text-xs italic"
+                       style={{
+                         background: 'var(--card)',
+                         color: 'var(--text-secondary)',
+                         borderLeft: `3px solid ${SEV_COLOR[sev]}`,
+                       }}>
+                    {flag.snippet}
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex gap-2 flex-wrap items-center">
-                  <button onClick={() => act(c.id, 'approved')}
-                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
+                  <button
+                    disabled={isActioning}
+                    onClick={() => handleAction(flag.id, 'approve')}
+                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
                     style={{ background: GREEN }}>
                     Approve
                   </button>
-                  <button onClick={() => act(c.id, 'escalated')}
-                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
+                  <button
+                    disabled={isActioning}
+                    onClick={() => handleAction(flag.id, 'escalate')}
+                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
                     style={{ background: GOLD }}>
                     Escalate
                   </button>
-                  <button onClick={() => act(c.id, 'banned')}
-                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
+                  <button
+                    disabled={isActioning}
+                    onClick={() => handleAction(flag.id, 'ban')}
+                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
                     style={{ background: RED }}>
                     Ban User
                   </button>
-                  {needsTechReview && (
+                  {needsTech && !flag.tech_review_requested && (
                     <button
-                      className="px-3 py-1.5 rounded text-xs font-semibold text-white flex items-center gap-1.5 ml-auto transition-all hover:brightness-90 active:scale-[0.97]"
+                      disabled={isActioning}
+                      onClick={() => handleAction(flag.id, 'tech_review')}
+                      className="px-3 py-1.5 rounded text-xs font-semibold text-white flex items-center gap-1.5 ml-auto transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
                       style={{ background: INDIGO }}>
                       <Code2 size={11} />
                       Request Tech Review
@@ -451,40 +508,52 @@ export default function ChatAssessment() {
             </div>
 
             <div className="space-y-1.5">
-              {resolved.map(c => {
-                const sm      = STATUS_META[c.status];
-                const catMeta = CATEGORY_META[c.category] ?? { label: c.category, color: ACCENT };
-                const needsTechReview = c.severity === 'high' || c.severity === 'critical';
+              {resolved.map(flag => {
+                const sev     = (flag.severity ?? 'low') as Severity;
+                const sm      = STATUS_META[flag.status] ?? STATUS_META.approved;
+                const catMeta = flag.category ? (CATEGORY_META[flag.category] ?? { label: flag.category, color: ACCENT }) : null;
+                const needsTech = sev === 'high' || sev === 'critical';
                 return (
-                  <div key={c.id}
+                  <div key={flag.id}
                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg flex-wrap"
                        style={{ background: 'var(--bg)' }}>
                     <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-                      {c.id}
+                      {shortId(flag.id)}
                     </span>
                     <span className="text-xs font-semibold px-1.5 py-0.5 capitalize"
-                          style={{ background: SEV_BG[c.severity], color: SEV_COLOR[c.severity], borderRadius: 3 }}>
-                      {c.severity}
+                          style={{ background: SEV_BG[sev], color: SEV_COLOR[sev], borderRadius: 3 }}>
+                      {sev}
                     </span>
-                    <span className="text-xs font-semibold px-1.5 py-0.5"
-                          style={{ background: `${catMeta.color}15`, color: catMeta.color, borderRadius: 3 }}>
-                      {catMeta.label}
-                    </span>
+                    {catMeta && (
+                      <span className="text-xs font-semibold px-1.5 py-0.5"
+                            style={{ background: `${catMeta.color}15`, color: catMeta.color, borderRadius: 3 }}>
+                        {catMeta.label}
+                      </span>
+                    )}
                     <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                      @{c.sender} → {c.recipient}
+                      @{flag.sender?.first_name.toLowerCase() ?? 'unknown'} → {displayName(flag.receiver)}
                     </span>
-                    <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>{c.time}</span>
+                    <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>
+                      {relTime(flag.created_at)}
+                    </span>
                     <span className="text-xs font-semibold px-1.5 py-0.5"
                           style={{ background: sm.bg, color: sm.color, borderRadius: 3 }}>
                       {sm.label}
                     </span>
-                    {needsTechReview && (
+                    {needsTech && !flag.tech_review_requested && (
                       <button
+                        onClick={() => handleAction(flag.id, 'tech_review')}
                         className="px-2.5 py-1 rounded text-xs font-semibold text-white flex items-center gap-1 transition-all hover:brightness-90 active:scale-[0.97]"
                         style={{ background: INDIGO }}>
                         <Code2 size={10} />
                         Request Tech Review
                       </button>
+                    )}
+                    {flag.tech_review_requested && (
+                      <span className="text-xs font-semibold px-1.5 py-0.5"
+                            style={{ background: `${INDIGO}20`, color: INDIGO, borderRadius: 3 }}>
+                        Tech Review Req.
+                      </span>
                     )}
                   </div>
                 );

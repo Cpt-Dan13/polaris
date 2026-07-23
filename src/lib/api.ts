@@ -63,6 +63,28 @@ export const api = {
       request(`/moderation/users/${userId}/ban`, { method: 'POST', body: JSON.stringify({ reason }) }),
     revokeSanction:  (sanctionId: string) =>
       request(`/moderation/sanctions/${sanctionId}/revoke`, { method: 'POST' }),
+
+    chat: {
+      kpis:            () =>
+        request<ChatKPIs>('/moderation/chat/kpis'),
+      riskDistribution: () =>
+        request<ChatRiskDistribution>('/moderation/chat/risk-distribution'),
+      flags:           (params?: { status?: string; severity?: string; limit?: number; offset?: number }) => {
+        const q = params ? `?${new URLSearchParams(
+          Object.fromEntries(
+            Object.entries(params)
+              .filter(([, v]) => v !== undefined)
+              .map(([k, v]) => [k, String(v)])
+          )
+        )}` : ''
+        return request<{ data: ChatFlag[]; count: number }>(`/moderation/chat/flags${q}`)
+      },
+      action: (flagId: string, action: ChatFlagAction, notes?: string) =>
+        request<{ success: boolean }>(`/moderation/chat/flags/${flagId}/action`, {
+          method: 'POST',
+          body: JSON.stringify({ action, notes }),
+        }),
+    },
   },
 
   finance: {
@@ -312,9 +334,41 @@ export interface AdminUser {
   user_id:      string
   email:        string
   full_name:    string | null
-  role:         'viewer' | 'support' | 'moderator' | 'admin' | 'super_admin'
+  role:         'viewer' | 'support' | 'super_admin'
   created_at:   string
   last_seen_at: string | null
+}
+
+// ── Chat Assessment ───────────────────────────────────────────────────────────
+
+export interface ChatKPIs {
+  monitored_today:    number
+  flagged_today:      number
+  flag_rate:          number   // percentage, e.g. 4.2 = 4.2%
+  awaiting_review:    number
+  auto_approved_rate: number   // percentage
+}
+
+export interface ChatRiskDistribution {
+  total:       number
+  by_category: { category: string; count: number }[]
+}
+
+export type ChatFlagStatus = 'pending' | 'approved' | 'escalated' | 'banned'
+export type ChatFlagAction = 'approve' | 'escalate' | 'ban' | 'tech_review'
+
+export interface ChatFlag {
+  id:                    string
+  category:              string | null
+  severity:              string | null
+  confidence:            number | null
+  flagged_terms:         string[]
+  status:                ChatFlagStatus
+  tech_review_requested: boolean
+  created_at:            string
+  sender:   { id: string; first_name: string; last_name: string | null } | null
+  receiver: { id: string; first_name: string; last_name: string | null } | null
+  snippet:  string | null
 }
 
 export interface RevenueKPIs {
