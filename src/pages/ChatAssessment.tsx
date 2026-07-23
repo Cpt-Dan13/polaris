@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageSquare, ShieldAlert, CheckCircle, Clock, Code2 } from 'lucide-react';
+import { MessageSquare, ShieldAlert, CheckCircle, Clock, Code2, ChevronDown } from 'lucide-react';
 
 const ACCENT = '#e94560';
 const GREEN  = '#4caf50';
@@ -172,14 +172,17 @@ const STATUS_META: Record<ConvStatus, { label: string; color: string; bg: string
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ChatAssessment() {
-  const [convos, setConvos]     = useState<FlaggedConv[]>(INITIAL_CONVOS);
-  const [filter, setFilter]     = useState<'all' | Severity>('all');
+  const [convos, setConvos]         = useState<FlaggedConv[]>(INITIAL_CONVOS);
+  const [filter, setFilter]         = useState<'all' | Severity>('all');
   const [hoveredCat, setHoveredCat] = useState<string | null>(null);
+  const [resolvedOpen, setResolvedOpen] = useState(false);
 
   const act = (id: string, status: ConvStatus) =>
     setConvos(prev => prev.map(c => c.id === id ? { ...c, status } : c));
 
-  const filtered = filter === 'all' ? convos : convos.filter(c => c.severity === filter);
+  const filtered  = filter === 'all' ? convos : convos.filter(c => c.severity === filter);
+  const pending   = filtered.filter(c => c.status === 'pending');
+  const resolved  = filtered.filter(c => c.status !== 'pending');
 
   return (
     <div className="space-y-5">
@@ -283,7 +286,29 @@ export default function ChatAssessment() {
       {/* Flagged Conversations */}
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Flagged Conversations</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Flagged Conversations</h3>
+
+            {/* Resolved dropdown toggle */}
+            {resolved.length > 0 && (
+              <button
+                onClick={() => setResolvedOpen(o => !o)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition-all hover:brightness-90 active:scale-[0.97]"
+                style={{
+                  background: resolvedOpen ? ACCENT : 'var(--bg)',
+                  color:      resolvedOpen ? '#fff' : 'var(--text-secondary)',
+                }}>
+                {resolved.length} Resolved
+                <ChevronDown
+                  size={11}
+                  style={{
+                    transform:  resolvedOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s ease',
+                  }}
+                />
+              </button>
+            )}
+          </div>
 
           {/* Severity filter */}
           <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--bg)' }}>
@@ -304,8 +329,20 @@ export default function ChatAssessment() {
           </div>
         </div>
 
+        {/* ── Pending ──────────────────────────────────────────────── */}
         <div className="space-y-3">
-          {filtered.map(c => {
+          {pending.length === 0 && resolved.length === 0 && (
+            <div className="py-12 text-center text-sm" style={{ color: 'var(--text-light)' }}>
+              No flagged conversations in this category
+            </div>
+          )}
+          {pending.length === 0 && resolved.length > 0 && (
+            <div className="py-5 text-center text-sm" style={{ color: 'var(--text-light)' }}>
+              No pending items — all cleared
+            </div>
+          )}
+
+          {pending.map(c => {
             const sm      = STATUS_META[c.status];
             const catMeta = CATEGORY_META[c.category] ?? { label: c.category, color: ACCENT };
             const needsTechReview = c.severity === 'high' || c.severity === 'critical';
@@ -372,55 +409,89 @@ export default function ChatAssessment() {
                 </div>
 
                 {/* Actions */}
-                {(c.status === 'pending' || needsTechReview) && (
-                  <div className="flex gap-2 flex-wrap items-center">
+                <div className="flex gap-2 flex-wrap items-center">
+                  <button onClick={() => act(c.id, 'approved')}
+                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
+                    style={{ background: GREEN }}>
+                    Approve
+                  </button>
+                  <button onClick={() => act(c.id, 'escalated')}
+                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
+                    style={{ background: GOLD }}>
+                    Escalate
+                  </button>
+                  <button onClick={() => act(c.id, 'banned')}
+                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
+                    style={{ background: RED }}>
+                    Ban User
+                  </button>
+                  {needsTechReview && (
+                    <button
+                      className="px-3 py-1.5 rounded text-xs font-semibold text-white flex items-center gap-1.5 ml-auto transition-all hover:brightness-90 active:scale-[0.97]"
+                      style={{ background: INDIGO }}>
+                      <Code2 size={11} />
+                      Request Tech Review
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
-                    {/* Moderation actions — pending only */}
-                    {c.status === 'pending' && (
-                      <>
-                        <button onClick={() => act(c.id, 'approved')}
-                          className="px-3 py-1.5 rounded-md text-xs font-semibold"
-                          style={{ background: 'rgba(76,175,80,0.12)', color: GREEN }}>
-                          Approve
-                        </button>
-                        <button onClick={() => act(c.id, 'escalated')}
-                          className="px-3 py-1.5 rounded-md text-xs font-semibold"
-                          style={{ background: `${GOLD}20`, color: GOLD }}>
-                          Escalate
-                        </button>
-                        <button onClick={() => act(c.id, 'banned')}
-                          className="px-3 py-1.5 rounded-md text-xs font-semibold"
-                          style={{ background: 'rgba(244,67,54,0.12)', color: RED }}>
-                          Ban User
-                        </button>
-                      </>
-                    )}
+        {/* ── Resolved ─────────────────────────────────────────────── */}
+        {resolvedOpen && resolved.length > 0 && (
+          <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border)' }}>
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: 'var(--text-light)' }}>
+                Resolved · {resolved.length} item{resolved.length !== 1 ? 's' : ''}
+              </span>
+              <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+            </div>
 
-                    {/* Tech review — High + Critical only, always visible */}
+            <div className="space-y-1.5">
+              {resolved.map(c => {
+                const sm      = STATUS_META[c.status];
+                const catMeta = CATEGORY_META[c.category] ?? { label: c.category, color: ACCENT };
+                const needsTechReview = c.severity === 'high' || c.severity === 'critical';
+                return (
+                  <div key={c.id}
+                       className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg flex-wrap"
+                       style={{ background: 'var(--bg)' }}>
+                    <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
+                      {c.id}
+                    </span>
+                    <span className="text-xs font-semibold px-1.5 py-0.5 capitalize"
+                          style={{ background: SEV_BG[c.severity], color: SEV_COLOR[c.severity], borderRadius: 3 }}>
+                      {c.severity}
+                    </span>
+                    <span className="text-xs font-semibold px-1.5 py-0.5"
+                          style={{ background: `${catMeta.color}15`, color: catMeta.color, borderRadius: 3 }}>
+                      {catMeta.label}
+                    </span>
+                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      @{c.sender} → {c.recipient}
+                    </span>
+                    <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>{c.time}</span>
+                    <span className="text-xs font-semibold px-1.5 py-0.5"
+                          style={{ background: sm.bg, color: sm.color, borderRadius: 3 }}>
+                      {sm.label}
+                    </span>
                     {needsTechReview && (
                       <button
-                        className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5${c.status === 'pending' ? ' ml-auto' : ''}`}
-                        style={{
-                          background: `${INDIGO}10`,
-                          color:       INDIGO,
-                          border:      `1px solid ${INDIGO}28`,
-                        }}>
-                        <Code2 size={11} />
+                        className="px-2.5 py-1 rounded text-xs font-semibold text-white flex items-center gap-1 transition-all hover:brightness-90 active:scale-[0.97]"
+                        style={{ background: INDIGO }}>
+                        <Code2 size={10} />
                         Request Tech Review
                       </button>
                     )}
                   </div>
-                )}
-              </div>
-            );
-          })}
-
-          {filtered.length === 0 && (
-            <div className="py-12 text-center text-sm" style={{ color: 'var(--text-light)' }}>
-              No flagged conversations in this category
+                );
+              })}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
     </div>
