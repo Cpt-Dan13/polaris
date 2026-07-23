@@ -63,6 +63,7 @@ export const api = {
     },
     reportKpis:              () => request<ReportKPIs>('/moderation/reports/kpis'),
     reportCategoryBreakdown: () => request<ReportCategoryBreakdown>('/moderation/reports/category-breakdown'),
+    reportCategoryTrend:     () => request<ReportCategoryTrend>('/moderation/reports/category-trend'),
     reportAction:            (id: string, action: ReportAction, notes?: string) =>
       request<{ success: boolean; status: string }>(`/moderation/reports/${id}/action`, {
         method: 'POST',
@@ -400,6 +401,19 @@ export interface ReportKPIs {
 export interface ReportCategoryBreakdown {
   total:       number
   by_category: { category: string; count: number }[]
+}
+
+export interface ReportCategoryTrend {
+  labels:              string[]
+  harassment:          number[]
+  explicit_content:    number[]
+  spam:                number[]
+  solicitation:        number[]
+  potential_scam:      number[]
+  underage_minor:      number[]
+  physical_self_harm:  number[]
+  terrorism_violence:  number[]
+  community_guideline: number[]
 }
 
 export type ReportStatus   = 'open' | 'investigating' | 'resolved' | 'dismissed'

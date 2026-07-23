@@ -5,6 +5,7 @@ import {
   api,
   type ReportKPIs,
   type ReportCategoryBreakdown,
+  type ReportCategoryTrend,
   type ModerationReport,
   type ReportAction,
   type ReportStatus,
@@ -58,10 +59,10 @@ const STATUS_META: Record<ReportStatus, { label: string; color: string; bg: stri
 interface ActionDef { label: string; action: ReportAction; color: string; bg: string }
 
 const SANCTION_ACTIONS: ActionDef[] = [
-  { label: 'Warn',        action: 'warn',        color: GOLD,   bg: `${GOLD}20`             },
-  { label: 'Suspend 24h', action: 'suspend_24h', color: ACCENT, bg: `${ACCENT}18`            },
-  { label: 'Suspend 7d',  action: 'suspend_7d',  color: PURPLE, bg: `${PURPLE}18`            },
-  { label: 'Ban',         action: 'ban',         color: RED,    bg: 'rgba(244,67,54,0.12)'  },
+  { label: 'Warn',        action: 'warn',        color: '#fff', bg: GOLD   },
+  { label: 'Suspend 24h', action: 'suspend_24h', color: '#fff', bg: ACCENT },
+  { label: 'Suspend 7d',  action: 'suspend_7d',  color: '#fff', bg: PURPLE },
+  { label: 'Ban',         action: 'ban',         color: '#fff', bg: RED    },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -130,35 +131,186 @@ function PersonChip({
   );
 }
 
+// ─── Chart helpers ────────────────────────────────────────────────────────────
+
+const TREND_SERIES = CATEGORY_ORDER as string[];
+
+function smoothCurve(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return '';
+  let d = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const cp1x = p1.x + (p2.x - p0.x) / 6, cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6, cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return d;
+}
+
+function smoothArea(pts: { x: number; y: number }[], bottom: number): string {
+  if (pts.length === 0) return '';
+  const line  = smoothCurve(pts);
+  const last  = pts[pts.length - 1];
+  const first = pts[0];
+  return `${line} L ${last.x.toFixed(2)} ${bottom.toFixed(2)} L ${first.x.toFixed(2)} ${bottom.toFixed(2)} Z`;
+}
+
+function CategoryTrendChart({ data, loading }: { data: ReportCategoryTrend | null; loading: boolean }) {
+  const W = 520, H = 200;
+  const pad = { t: 16, r: 16, b: 36, l: 40 };
+  const cW  = W - pad.l - pad.r;
+  const cH  = H - pad.t - pad.b;
+  const bottom = pad.t + cH;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center" style={{ height: H }}>
+        <span className="text-xs" style={{ color: 'var(--text-light)' }}>Loading trend…</span>
+      </div>
+    );
+  }
+
+  const labels = data?.labels ?? [];
+  const n      = labels.length;
+
+  const seriesData: Record<string, number[]> = {};
+  for (const cat of TREND_SERIES) {
+    seriesData[cat] = (data as Record<string, number[]> | null)?.[cat] ?? new Array(n).fill(0);
+  }
+
+  // Only show series that have at least one non-zero value
+  const activeSeries = TREND_SERIES.filter(cat => seriesData[cat].some(v => v > 0));
+
+  const allVals = TREND_SERIES.flatMap(cat => seriesData[cat]);
+  const hasData = allVals.some(v => v > 0);
+  const rawMax  = hasData ? Math.max(...allVals, 1) : 1;
+  const maxVal  = Math.ceil(rawMax * 1.25 / 5) * 5 || 5;
+  const yTicks  = [0, Math.round(maxVal / 2), maxVal];
+
+  function toX(i: number) { return pad.l + (i / Math.max(n - 1, 1)) * cW; }
+  function toY(v: number) { return pad.t + cH - (v / maxVal) * cH; }
+  function getPoints(arr: number[]) { return arr.map((v, i) => ({ x: toX(i), y: toY(v) })); }
+
+  return (
+    <div>
+      {/* Legend — only active series */}
+      <div className="flex gap-4 mb-4 flex-wrap">
+        {(activeSeries.length > 0 ? activeSeries : TREND_SERIES.slice(0, 4)).map(cat => {
+          const meta = CATEGORY_META[cat];
+          if (!meta) return null;
+          return (
+            <div key={cat} className="flex items-center gap-1.5">
+              <div className="rounded-full" style={{ width: 24, height: 2, background: meta.color }} />
+              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{meta.label}</span>
+            </div>
+          );
+        })}
+        {!hasData && (
+          <span className="text-xs" style={{ color: 'var(--text-light)' }}>No data in the last 8 weeks</span>
+        )}
+      </div>
+
+      <div style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ minWidth: 380, width: '100%', height: 'auto', display: 'block' }}>
+          <defs>
+            {TREND_SERIES.map(cat => {
+              const color = CATEGORY_META[cat]?.color ?? ACCENT;
+              return (
+                <linearGradient key={cat} id={`rpt-grad-${cat}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor={color} stopOpacity="0.20" />
+                  <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+                </linearGradient>
+              );
+            })}
+          </defs>
+
+          {/* Y-axis grid + labels */}
+          {yTicks.map(t => (
+            <g key={t}>
+              <line x1={pad.l} x2={W - pad.r} y1={toY(t)} y2={toY(t)}
+                    stroke="var(--border)" strokeWidth="0.5" strokeDasharray="3,3" />
+              <text x={pad.l - 6} y={toY(t) + 4} textAnchor="end"
+                    style={{ fill: 'var(--text-light)', fontSize: 9 }}>
+                {t}
+              </text>
+            </g>
+          ))}
+
+          {/* X-axis labels */}
+          {labels.map((lbl, i) => (
+            <text key={lbl + i} x={toX(i)} y={H - 7} textAnchor="middle"
+                  style={{ fill: 'var(--text-light)', fontSize: 9 }}>
+              {lbl}
+            </text>
+          ))}
+
+          {/* Area fills */}
+          {TREND_SERIES.map(cat => (
+            <path key={`area-${cat}`}
+                  d={smoothArea(getPoints(seriesData[cat]), bottom)}
+                  fill={`url(#rpt-grad-${cat})`}
+                  opacity={hasData ? 1 : 0} />
+          ))}
+
+          {/* Lines + endpoint dots */}
+          {TREND_SERIES.map(cat => {
+            const color = CATEGORY_META[cat]?.color ?? ACCENT;
+            const pts   = getPoints(seriesData[cat]);
+            const isActive = activeSeries.includes(cat);
+            if (!isActive) return null;
+            const last = pts[pts.length - 1];
+            return (
+              <g key={cat}>
+                <path d={smoothCurve(pts)} fill="none"
+                      stroke={color} strokeWidth="1.75"
+                      strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx={last.x} cy={last.y} r="4" fill={color} />
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ReportEvaluation() {
-  const [kpis,        setKpis]        = useState<ReportKPIs | null>(null);
-  const [breakdown,   setBreakdown]   = useState<ReportCategoryBreakdown | null>(null);
-  const [reports,     setReports]     = useState<ModerationReport[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState<string | null>(null);
-  const [actioning,   setActioning]   = useState<string | null>(null);
-  const [catFilter,   setCatFilter]   = useState('all');
-  const [hoveredCat,  setHoveredCat]  = useState<string | null>(null);
+  const [kpis,         setKpis]         = useState<ReportKPIs | null>(null);
+  const [breakdown,    setBreakdown]    = useState<ReportCategoryBreakdown | null>(null);
+  const [trendData,    setTrendData]    = useState<ReportCategoryTrend | null>(null);
+  const [trendLoading, setTrendLoading] = useState(true);
+  const [reports,      setReports]      = useState<ModerationReport[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState<string | null>(null);
+  const [actioning,    setActioning]    = useState<string | null>(null);
+  const [catFilter,    setCatFilter]    = useState('all');
   const [showWipModal, setShowWipModal] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setTrendLoading(true);
     setError(null);
     try {
-      const [kpisData, breakdownData, reportsData] = await Promise.all([
+      const [kpisData, breakdownData, trendResult, reportsData] = await Promise.all([
         api.moderation.reportKpis(),
         api.moderation.reportCategoryBreakdown(),
+        api.moderation.reportCategoryTrend(),
         api.moderation.reports({ limit: 100 }),
       ]);
       setKpis(kpisData);
       setBreakdown(breakdownData);
+      setTrendData(trendResult);
       setReports(reportsData.data);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load report data');
     } finally {
       setLoading(false);
+      setTrendLoading(false);
     }
   }, []);
 
@@ -178,16 +330,14 @@ export default function ReportEvaluation() {
     }
   };
 
-  // Derive sorted breakdown for the bar chart
+  // Breakdown counts used by the category filter pill badges
   const sortedDist = breakdown
     ? CATEGORY_ORDER
         .map(cat => ({
           category: cat,
           count: breakdown.by_category.find(b => b.category === cat)?.count ?? 0,
         }))
-        .filter(r => r.count > 0)
     : [];
-  const distTotal = sortedDist.reduce((a, r) => a + r.count, 0);
 
   // Filter report list
   const visible = catFilter === 'all'
@@ -241,75 +391,14 @@ export default function ReportEvaluation() {
         })}
       </div>
 
-      {/* Category Breakdown */}
-      {distTotal > 0 && (
-        <div className="card p-5">
-          <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>
-            Reports by Category —{' '}
-            <span style={{ color: 'var(--text-light)', fontWeight: 400 }}>{distTotal} classified</span>
-          </h3>
-
-          {/* Stacked bar */}
-          <div className="flex h-2.5 rounded-full overflow-hidden gap-px mb-5">
-            {sortedDist.map(r => {
-              const meta = CATEGORY_META[r.category];
-              if (!meta) return null;
-              return (
-                <div
-                  key={r.category}
-                  title={`${meta.label}: ${r.count}`}
-                  onMouseEnter={() => setHoveredCat(r.category)}
-                  onMouseLeave={() => setHoveredCat(null)}
-                  style={{
-                    width:      `${(r.count / distTotal * 100).toFixed(1)}%`,
-                    background: meta.color,
-                    minWidth:   r.count > 0 ? 2 : 0,
-                    filter:     hoveredCat !== null && hoveredCat !== r.category
-                      ? 'brightness(0.5) saturate(0.5)' : 'none',
-                    transition: 'filter 0.18s ease',
-                    cursor:     'default',
-                  }}
-                />
-              );
-            })}
-          </div>
-
-          {/* Progress bars per category */}
-          <div className="space-y-3">
-            {sortedDist.map(r => {
-              const meta  = CATEGORY_META[r.category];
-              if (!meta) return null;
-              const isHot = hoveredCat === r.category;
-              const isDim = hoveredCat !== null && !isHot;
-              return (
-                <div key={r.category}
-                     onMouseEnter={() => setHoveredCat(r.category)}
-                     onMouseLeave={() => setHoveredCat(null)}
-                     style={{ opacity: isDim ? 0.35 : 1, transition: 'opacity 0.18s ease' }}>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: meta.color }} />
-                      <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                        {meta.label}
-                      </span>
-                    </div>
-                    <span className="text-xs font-bold" style={{ color: 'var(--text)' }}>
-                      {r.count}{' '}
-                      <span style={{ color: 'var(--text-light)', fontWeight: 400 }}>
-                        ({(r.count / distTotal * 100).toFixed(0)}%)
-                      </span>
-                    </span>
-                  </div>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg)' }}>
-                    <div className="h-full rounded-full transition-all"
-                         style={{ width: `${(r.count / distTotal * 100).toFixed(1)}%`, background: meta.color }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Category Trend Chart */}
+      <div className="card p-5">
+        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>
+          Reports by Category —{' '}
+          <span style={{ color: 'var(--text-light)', fontWeight: 400 }}>last 8 weeks</span>
+        </h3>
+        <CategoryTrendChart data={trendData} loading={trendLoading} />
+      </div>
 
       {/* Report Queue */}
       <div className="card p-5">
@@ -323,21 +412,28 @@ export default function ReportEvaluation() {
             )}
           </h3>
 
-          {/* Category filter pills */}
+          {/* Category filter pills — all 9 categories always shown */}
           <div className="flex gap-1 flex-wrap">
-            {(['all', ...CATEGORY_ORDER.filter(c => sortedDist.some(d => d.category === c))] as const).map(cat => {
+            {(['all', ...CATEGORY_ORDER] as const).map(cat => {
               const active = catFilter === cat;
               const meta   = cat === 'all' ? null : CATEGORY_META[cat];
               const color  = meta?.color ?? ACCENT;
+              const count  = cat === 'all' ? null : (sortedDist.find(d => d.category === cat)?.count ?? 0);
               return (
                 <button key={cat} onClick={() => setCatFilter(cat)}
-                  className="px-2.5 py-1 rounded-md text-xs font-medium transition-all"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all"
                   style={{
                     background: active ? `${color}15` : 'var(--bg)',
                     color:      active ? color : 'var(--text-secondary)',
                     border:     `1px solid ${active ? `${color}40` : 'var(--border)'}`,
+                    opacity:    count === 0 ? 0.45 : 1,
                   }}>
                   {cat === 'all' ? 'All' : (meta?.label ?? cat)}
+                  {count !== null && count > 0 && (
+                    <span className="font-bold" style={{ color: active ? color : 'var(--text-light)' }}>
+                      {count}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -431,10 +527,9 @@ export default function ReportEvaluation() {
                     {/* Investigate (only for open) */}
                     {r.status === 'open' && (
                       <button
-                        disabled={isActioning}
-                        onClick={() => handleAction(r.id, 'investigate')}
-                        className="px-3 py-1.5 rounded-md text-xs font-semibold transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
-                        style={{ background: `${INDIGO}18`, color: INDIGO }}>
+                        onClick={() => setShowWipModal(true)}
+                        className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97] focus:outline-none focus:brightness-90"
+                        style={{ background: INDIGO }}>
                         Investigate
                       </button>
                     )}
@@ -442,20 +537,18 @@ export default function ReportEvaluation() {
                     {/* Sanction actions */}
                     {SANCTION_ACTIONS.map(a => (
                       <button key={a.action}
-                        disabled={isActioning}
-                        onClick={() => handleAction(r.id, a.action)}
-                        className="px-3 py-1.5 rounded-md text-xs font-semibold transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
-                        style={{ background: a.bg, color: a.color }}>
+                        onClick={() => setShowWipModal(true)}
+                        className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97] focus:outline-none focus:brightness-90"
+                        style={{ background: a.bg }}>
                         {a.label}
                       </button>
                     ))}
 
                     {/* Dismiss */}
                     <button
-                      disabled={isActioning}
-                      onClick={() => handleAction(r.id, 'dismiss')}
-                      className="px-3 py-1.5 rounded-md text-xs font-semibold transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
-                      style={{ background: 'rgba(120,144,156,0.12)', color: SLATE }}>
+                      onClick={() => setShowWipModal(true)}
+                      className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97] focus:outline-none focus:brightness-90"
+                      style={{ background: SLATE }}>
                       Dismiss
                     </button>
                   </div>
