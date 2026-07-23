@@ -430,16 +430,23 @@ export default function Subscriptions() {
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Activity — Nova and Supernova only */}
       <div className="card p-5">
         <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>Recent Activity</h3>
-        {eventsLoading ? <Spinner /> : events.length === 0 ? (
-          <p className="text-sm text-center py-6" style={{ color: 'var(--text-light)' }}>
-            No subscription events yet
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {events.map(item => {
+        {eventsLoading ? <Spinner /> : (() => {
+          const paidEvents = events.filter(item => {
+            const effectiveTier = (item.event_type === 'upgraded' || item.event_type === 'downgraded')
+              ? item.to_tier
+              : item.tier;
+            return effectiveTier !== 'orbit';
+          });
+          return paidEvents.length === 0 ? (
+            <p className="text-sm text-center py-6" style={{ color: 'var(--text-light)' }}>
+              No Nova or Supernova activity yet
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {paidEvents.map(item => {
               const meta   = ACTION_META[item.event_type];
               const Icon   = meta.icon;
               const isMove = item.event_type === 'upgraded' || item.event_type === 'downgraded';
@@ -475,9 +482,10 @@ export default function Subscriptions() {
                   </span>
                 </div>
               );
-            })}
-          </div>
-        )}
+              })}
+            </div>
+          );
+        })()}
       </div>
 
     </div>
