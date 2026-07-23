@@ -51,7 +51,23 @@ export const api = {
   },
 
   moderation: {
-    reports:         (limit = 50) => request(`/moderation/reports?limit=${limit}`),
+    reports: (params?: { status?: string; category?: string; priority?: string; limit?: number; offset?: number }) => {
+      const q = params ? `?${new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(params)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, String(v)])
+        )
+      )}` : ''
+      return request<{ data: ModerationReport[]; count: number }>(`/moderation/reports${q}`)
+    },
+    reportKpis:              () => request<ReportKPIs>('/moderation/reports/kpis'),
+    reportCategoryBreakdown: () => request<ReportCategoryBreakdown>('/moderation/reports/category-breakdown'),
+    reportAction:            (id: string, action: ReportAction, notes?: string) =>
+      request<{ success: boolean; status: string }>(`/moderation/reports/${id}/action`, {
+        method: 'POST',
+        body:   JSON.stringify({ action, notes }),
+      }),
     flaggedMessages: (limit = 50) => request(`/moderation/flagged-messages?limit=${limit}`),
     blocks:          (limit = 50) => request(`/moderation/blocks?limit=${limit}`),
     userSanctions:   (userId: string) => request(`/moderation/users/${userId}/sanctions`),
@@ -370,6 +386,37 @@ export interface ChatFlag {
   sender:   { id: string; first_name: string; last_name: string | null; photo_url?: string | null } | null
   receiver: { id: string; first_name: string; last_name: string | null; photo_url?: string | null } | null
   snippet:  string | null
+}
+
+// ── Report Evaluation ─────────────────────────────────────────────────────────
+
+export interface ReportKPIs {
+  open_reports:    number
+  escalated:       number
+  resolution_rate: number
+  total_reports:   number
+}
+
+export interface ReportCategoryBreakdown {
+  total:       number
+  by_category: { category: string; count: number }[]
+}
+
+export type ReportStatus   = 'open' | 'investigating' | 'resolved' | 'dismissed'
+export type ReportPriority = 'critical' | 'high' | 'medium' | 'low'
+export type ReportAction   = 'warn' | 'suspend_24h' | 'suspend_7d' | 'ban' | 'dismiss' | 'investigate'
+
+export interface ModerationReport {
+  id:         string
+  reason:     string
+  notes:      string | null
+  category:   string | null
+  is_trivial: boolean
+  status:     ReportStatus
+  priority:   ReportPriority
+  created_at: string
+  reporter: { id: string; first_name: string; last_name: string | null; photo_url?: string | null } | null
+  reported: { id: string; first_name: string; last_name: string | null; photo_url?: string | null } | null
 }
 
 export interface RevenueKPIs {
