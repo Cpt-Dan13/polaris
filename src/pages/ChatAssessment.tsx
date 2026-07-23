@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { MessageSquare, ShieldAlert, CheckCircle, Clock, Code2, ChevronDown, ChevronLeft, ChevronRight, Hash } from 'lucide-react';
 import { api, type ChatFlag, type ChatFlagAction, type ChatKPIs, type ChatRiskDistribution } from '../lib/api';
 
@@ -103,14 +104,14 @@ function PersonChip({
           src={person.photo_url}
           alt={name}
           className="flex-shrink-0 object-cover rounded-full"
-          style={{ width: 20, height: 20 }}
+          style={{ width: 28, height: 28 }}
         />
       ) : (
         <span
           className="flex-shrink-0 rounded-full flex items-center justify-center font-bold"
           style={{
-            width: 20, height: 20,
-            fontSize: 8,
+            width: 28, height: 28,
+            fontSize: 10,
             background: accent ? `${ACCENT}25` : 'var(--border)',
             color:      accent ? ACCENT : 'var(--text-secondary)',
           }}>
@@ -151,6 +152,7 @@ export default function ChatAssessment() {
   const [filter,       setFilter]       = useState<'all' | Severity>('all');
   const [hoveredCat,   setHoveredCat]   = useState<string | null>(null);
   const [resolvedOpen, setResolvedOpen] = useState(false);
+  const [showWipModal, setShowWipModal] = useState(false);
 
   // Keyword history state
   const [kwFlags,   setKwFlags]   = useState<ChatFlag[]>([]);
@@ -491,16 +493,12 @@ export default function ChatAssessment() {
                 {/* Metadata grid */}
                 <div className="grid grid-cols-3 gap-3 mb-3">
                   <div>
-                    <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)' }}>Sender</div>
-                    <div className="text-sm font-semibold" style={{ color: ACCENT }}>
-                      @{flag.sender ? flag.sender.first_name.toLowerCase() : 'unknown'}
-                    </div>
+                    <div className="text-xs mb-1.5" style={{ color: 'var(--text-light)' }}>Sender</div>
+                    <PersonChip person={flag.sender} accent />
                   </div>
                   <div>
-                    <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)' }}>Recipient</div>
-                    <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-                      {displayName(flag.receiver)}
-                    </div>
+                    <div className="text-xs mb-1.5" style={{ color: 'var(--text-light)' }}>Recipient</div>
+                    <PersonChip person={flag.receiver} />
                   </div>
                   <div>
                     <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)' }}>AI Confidence</div>
@@ -523,13 +521,21 @@ export default function ChatAssessment() {
 
                 {/* Message snippet */}
                 {flag.snippet && (
-                  <div className="p-2.5 rounded-lg mb-3 text-xs italic"
+                  <div className="px-2.5 pt-2 pb-2 mb-3"
                        style={{
-                         background: 'var(--card)',
-                         color: 'var(--text-secondary)',
-                         borderLeft: `3px solid ${SEV_COLOR[sev]}`,
+                         background:   'var(--card)',
+                         borderLeft:   `3px solid ${SEV_COLOR[sev]}`,
+                         borderRadius: 6,
                        }}>
-                    {flag.snippet}
+                    <div className="flex items-center gap-1 mb-1">
+                      <MessageSquare size={10} style={{ color: 'var(--text-light)', flexShrink: 0 }} />
+                      <span style={{ color: 'var(--text-light)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Message
+                      </span>
+                    </div>
+                    <span className="text-xs italic" style={{ color: 'var(--text-secondary)' }}>
+                      {flag.snippet}
+                    </span>
                   </div>
                 )}
 
@@ -559,7 +565,7 @@ export default function ChatAssessment() {
                   {needsTech && !flag.tech_review_requested && (
                     <button
                       disabled={isActioning}
-                      onClick={() => handleAction(flag.id, 'tech_review')}
+                      onClick={() => setShowWipModal(true)}
                       className="px-3 py-1.5 rounded text-xs font-semibold text-white flex items-center gap-1.5 ml-auto transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
                       style={{ background: INDIGO }}>
                       <Code2 size={11} />
@@ -606,9 +612,9 @@ export default function ChatAssessment() {
                         {catMeta.label}
                       </span>
                     )}
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                      @{flag.sender?.first_name.toLowerCase() ?? 'unknown'} → {displayName(flag.receiver)}
-                    </span>
+                    <PersonChip person={flag.sender} accent />
+                    <span className="text-xs" style={{ color: 'var(--text-light)' }}>→</span>
+                    <PersonChip person={flag.receiver} />
                     <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>
                       {relTime(flag.created_at)}
                     </span>
@@ -618,7 +624,7 @@ export default function ChatAssessment() {
                     </span>
                     {needsTech && !flag.tech_review_requested && (
                       <button
-                        onClick={() => handleAction(flag.id, 'tech_review')}
+                        onClick={() => setShowWipModal(true)}
                         className="px-2.5 py-1 rounded text-xs font-semibold text-white flex items-center gap-1 transition-all hover:brightness-90 active:scale-[0.97]"
                         style={{ background: INDIGO }}>
                         <Code2 size={10} />
@@ -650,7 +656,7 @@ export default function ChatAssessment() {
               <Hash size={14} style={{ color: GOLD }} />
             </div>
             <h3 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-              Flagged Keyword History
+              Flagged Keywords
             </h3>
 
             {/* Live badge */}
@@ -700,38 +706,13 @@ export default function ChatAssessment() {
                        className="p-3 rounded-xl"
                        style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
 
-                    {/* Top row: keyword chips + status + time */}
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <span className="text-xs font-mono" style={{ color: 'var(--text-light)' }}>
-                        {shortId(flag.id)}
-                      </span>
-                      {(flag.flagged_terms ?? []).map(term => (
-                        <span key={term}
-                              className="text-xs font-semibold px-2 py-0.5 rounded"
-                              style={{
-                                background: 'rgba(234,179,8,0.15)',
-                                color: GOLD,
-                                fontFamily: 'monospace',
-                              }}>
-                          #{term}
-                        </span>
-                      ))}
-                      <span className="ml-auto text-xs font-semibold px-1.5 py-0.5 rounded"
-                            style={{ background: sm.bg, color: sm.color }}>
-                        {sm.label}
-                      </span>
+                    {/* Header: timestamp left, confidence right */}
+                    <div className="flex items-center justify-between mb-2">
                       <span className="text-xs" style={{ color: 'var(--text-light)' }}>
                         {relTime(flag.created_at)}
                       </span>
-                    </div>
-
-                    {/* Sender → Recipient row */}
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <PersonChip person={flag.sender} accent />
-                      <span className="text-xs" style={{ color: 'var(--text-light)' }}>→</span>
-                      <PersonChip person={flag.receiver} />
                       {flag.confidence != null && (
-                        <span className="text-xs font-bold ml-1"
+                        <span className="text-xs font-bold"
                               style={{
                                 color: flag.confidence >= 85
                                   ? SEV_COLOR.critical
@@ -739,9 +720,16 @@ export default function ChatAssessment() {
                                     ? SEV_COLOR.high
                                     : SEV_COLOR.medium,
                               }}>
-                          {flag.confidence}%
+                          {flag.confidence}% confidence
                         </span>
                       )}
+                    </div>
+
+                    {/* Sender → Recipient row */}
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <PersonChip person={flag.sender} accent />
+                      <span className="text-xs" style={{ color: 'var(--text-light)' }}>→</span>
+                      <PersonChip person={flag.receiver} />
                     </div>
 
                     {/* Message snippet */}
@@ -799,6 +787,34 @@ export default function ChatAssessment() {
           </>
         )}
       </div>
+
+      {/* WIP modal — rendered in a portal so fixed positioning isn't clipped by overflow ancestors */}
+      {showWipModal && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.55)' }}
+          onClick={() => setShowWipModal(false)}>
+          <div
+            className="card p-8 flex flex-col items-center gap-3 rounded-2xl"
+            style={{ maxWidth: 340, width: '90%', boxShadow: '0 24px 48px rgba(0,0,0,0.4)' }}
+            onClick={e => e.stopPropagation()}>
+            <span style={{ fontSize: 48, lineHeight: 1 }}>🚧</span>
+            <h3 className="text-base font-bold" style={{ color: 'var(--text)' }}>
+              Work in Progress
+            </h3>
+            <p className="text-sm text-center" style={{ color: 'var(--text-light)' }}>
+              Tech review workflows are coming soon. This feature is under active development.
+            </p>
+            <button
+              onClick={() => setShowWipModal(false)}
+              className="mt-2 px-5 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
+              style={{ background: INDIGO }}>
+              Got it
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )}
 
     </div>
   );
