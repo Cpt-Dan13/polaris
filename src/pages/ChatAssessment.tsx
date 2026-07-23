@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MessageSquare, ShieldAlert, CheckCircle, Clock, Code2, ChevronDown, ChevronLeft, ChevronRight, Hash } from 'lucide-react';
+import { MessageSquare, ShieldAlert, CheckCircle, Clock, Code2, ChevronDown, ChevronLeft, ChevronRight, Hash, Clipboard, Check } from 'lucide-react';
 import { api, type ChatFlag, type ChatFlagAction, type ChatKPIs, type ChatRiskDistribution } from '../lib/api';
 
 const ACCENT = '#e94560';
@@ -137,6 +137,20 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string }> 
   banned:    { label: 'Banned',    color: RED,    bg: 'rgba(244,67,54,0.12)' },
 };
 
+function CopyButton({ id, copiedId, onCopy }: { id: string; copiedId: string | null; onCopy: (id: string) => void }) {
+  const copied = copiedId === id;
+  const Icon   = copied ? Check : Clipboard;
+  return (
+    <button
+      onClick={() => onCopy(id)}
+      title={copied ? 'Copied!' : `Copy ID: ${id}`}
+      className="flex-shrink-0 rounded p-0.5 transition-all hover:opacity-70 active:scale-90 focus:outline-none"
+      style={{ color: copied ? GREEN : '#38bdf8' }}>
+      <Icon size={12} />
+    </button>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const KW_PAGE_SIZE = 10;
@@ -152,7 +166,14 @@ export default function ChatAssessment() {
   const [filter,       setFilter]       = useState<'all' | Severity>('all');
   const [hoveredCat,   setHoveredCat]   = useState<string | null>(null);
   const [resolvedOpen, setResolvedOpen] = useState(false);
+  const [copiedId,     setCopiedId]     = useState<string | null>(null);
   const [showWipModal, setShowWipModal] = useState(false);
+
+  const copyId = useCallback((id: string) => {
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
+  }, []);
 
   // Keyword history state
   const [kwFlags,   setKwFlags]   = useState<ChatFlag[]>([]);
@@ -494,11 +515,21 @@ export default function ChatAssessment() {
                 <div className="grid grid-cols-3 gap-3 mb-3">
                   <div>
                     <div className="text-xs mb-1.5" style={{ color: 'var(--text-light)' }}>Sender</div>
-                    <PersonChip person={flag.sender} accent />
+                    <div className="flex items-center gap-1">
+                      <PersonChip person={flag.sender} accent />
+                      {flag.sender?.id && (
+                        <CopyButton id={flag.sender.id} copiedId={copiedId} onCopy={copyId} />
+                      )}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs mb-1.5" style={{ color: 'var(--text-light)' }}>Recipient</div>
-                    <PersonChip person={flag.receiver} />
+                    <div className="flex items-center gap-1">
+                      <PersonChip person={flag.receiver} />
+                      {flag.receiver?.id && (
+                        <CopyButton id={flag.receiver.id} copiedId={copiedId} onCopy={copyId} />
+                      )}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)' }}>AI Confidence</div>
@@ -612,9 +643,19 @@ export default function ChatAssessment() {
                         {catMeta.label}
                       </span>
                     )}
-                    <PersonChip person={flag.sender} accent />
+                    <div className="flex items-center gap-1">
+                      <PersonChip person={flag.sender} accent />
+                      {flag.sender?.id && (
+                        <CopyButton id={flag.sender.id} copiedId={copiedId} onCopy={copyId} />
+                      )}
+                    </div>
                     <span className="text-xs" style={{ color: 'var(--text-light)' }}>→</span>
-                    <PersonChip person={flag.receiver} />
+                    <div className="flex items-center gap-1">
+                      <PersonChip person={flag.receiver} />
+                      {flag.receiver?.id && (
+                        <CopyButton id={flag.receiver.id} copiedId={copiedId} onCopy={copyId} />
+                      )}
+                    </div>
                     <span className="text-xs ml-auto" style={{ color: 'var(--text-light)' }}>
                       {relTime(flag.created_at)}
                     </span>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertOctagon, TrendingUp, CheckCircle, Layers } from 'lucide-react';
+import { AlertOctagon, TrendingUp, CheckCircle, Layers, Clipboard, Check } from 'lucide-react';
 import {
   api,
   type ReportKPIs,
@@ -130,6 +130,20 @@ function PersonChip({
   );
 }
 
+function CopyButton({ id, copiedId, onCopy }: { id: string; copiedId: string | null; onCopy: (id: string) => void }) {
+  const copied = copiedId === id;
+  const Icon   = copied ? Check : Clipboard;
+  return (
+    <button
+      onClick={() => onCopy(id)}
+      title={copied ? 'Copied!' : `Copy ID: ${id}`}
+      className="flex-shrink-0 rounded p-0.5 transition-all hover:opacity-70 active:scale-90 focus:outline-none"
+      style={{ color: copied ? GREEN : '#38bdf8' }}>
+      <Icon size={12} />
+    </button>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ReportEvaluation() {
@@ -141,7 +155,14 @@ export default function ReportEvaluation() {
   const [actioning,    setActioning]    = useState<string | null>(null);
   const [catFilter,    setCatFilter]    = useState('all');
   const [hoveredCat,   setHoveredCat]   = useState<string | null>(null);
+  const [copiedId,     setCopiedId]     = useState<string | null>(null);
   const [showWipModal, setShowWipModal] = useState(false);
+
+  const copyId = useCallback((id: string) => {
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -405,11 +426,21 @@ export default function ReportEvaluation() {
                 <div className="grid grid-cols-3 gap-3 mb-3">
                   <div>
                     <div className="text-xs mb-1.5" style={{ color: 'var(--text-light)' }}>Reporter</div>
-                    <PersonChip person={r.reporter} />
+                    <div className="flex items-center gap-1">
+                      <PersonChip person={r.reporter} />
+                      {r.reporter?.id && (
+                        <CopyButton id={r.reporter.id} copiedId={copiedId} onCopy={copyId} />
+                      )}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs mb-1.5" style={{ color: 'var(--text-light)' }}>Reported</div>
-                    <PersonChip person={r.reported} accent />
+                    <div className="flex items-center gap-1">
+                      <PersonChip person={r.reported} accent />
+                      {r.reported?.id && (
+                        <CopyButton id={r.reported.id} copiedId={copiedId} onCopy={copyId} />
+                      )}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)' }}>Reason</div>
