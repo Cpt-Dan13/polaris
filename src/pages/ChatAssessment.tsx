@@ -68,15 +68,6 @@ function shortId(id: string): string {
   return `FLG-${id.replace(/-/g, '').slice(-4).toUpperCase()}`;
 }
 
-function displayName(
-  person: { first_name: string; last_name: string | null } | null,
-  fallback = 'Unknown',
-): string {
-  if (!person) return fallback;
-  const last = person.last_name ? ` ${person.last_name[0]}.` : '';
-  return `${person.first_name}${last}`;
-}
-
 function fullName(
   person: { first_name: string; last_name: string | null } | null,
   fallback = 'Unknown',
@@ -163,6 +154,8 @@ export default function ChatAssessment() {
   const [error,        setError]        = useState<string | null>(null);
   const [actioning,    setActioning]    = useState<string | null>(null);
 
+  const [tab,          setTab]          = useState<'general' | 'keywords'>('general');
+  const [hoveredTab,   setHoveredTab]   = useState<'general' | 'keywords' | null>(null);
   const [filter,       setFilter]       = useState<'all' | Severity>('all');
   const [hoveredCat,   setHoveredCat]   = useState<string | null>(null);
   const [resolvedOpen, setResolvedOpen] = useState(false);
@@ -404,7 +397,47 @@ export default function ChatAssessment() {
         </div>
       )}
 
-      {/* Flagged Conversations */}
+      {/* Tab nav */}
+      <div className="flex gap-7" style={{ borderBottom: '1px solid var(--border)' }}>
+        {(['general', 'keywords'] as const).map(t => {
+          const active  = tab === t;
+          const isHover = hoveredTab === t;
+          const label   = t === 'general' ? 'User Reported' : 'System Detected';
+          return (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              onMouseEnter={() => setHoveredTab(t)}
+              onMouseLeave={() => setHoveredTab(null)}
+              className="relative pb-3 text-sm font-semibold"
+              style={{
+                background: 'none',
+                border:     'none',
+                cursor:     'pointer',
+                color:      active ? ACCENT : isHover ? 'var(--text)' : 'var(--text-secondary)',
+                transition: 'color 0.18s ease',
+              }}>
+              {label}
+              <span style={{
+                position:        'absolute',
+                bottom:          -1,
+                left:            0,
+                right:           0,
+                height:          2,
+                background:      ACCENT,
+                borderRadius:    1,
+                transform:       active || isHover ? 'scaleX(1)' : 'scaleX(0)',
+                opacity:         active ? 1 : 0.35,
+                transition:      'transform 0.2s ease, opacity 0.2s ease',
+                transformOrigin: 'left',
+              }} />
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── General tab ── */}
+      {tab === 'general' && (
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div className="flex items-center gap-2">
@@ -685,8 +718,10 @@ export default function ChatAssessment() {
           </div>
         )}
       </div>
+      )} {/* end General tab */}
 
-      {/* ── Flagged Keyword History ───────────────────────────────────────── */}
+      {/* ── Keywords tab ── */}
+      {tab === 'keywords' && (
       <div className="card p-5">
 
         {/* Section header */}
@@ -741,7 +776,6 @@ export default function ChatAssessment() {
           <>
             <div className="space-y-2">
               {kwFlags.map(flag => {
-                const sm = STATUS_META[flag.status] ?? STATUS_META.pending;
                 return (
                   <div key={flag.id}
                        className="p-3 rounded-xl"
@@ -828,6 +862,7 @@ export default function ChatAssessment() {
           </>
         )}
       </div>
+      )} {/* end Keywords tab */}
 
       {/* WIP modal — rendered in a portal so fixed positioning isn't clipped by overflow ancestors */}
       {showWipModal && createPortal(
