@@ -1,6 +1,6 @@
 ﻿import {
   LayoutDashboard, Bot, Clock,
-  Users, Headphones, Star, Flag, Megaphone, Sparkles, Settings,
+  Users, Headphones, Star, Megaphone, Sparkles, Settings,
   ChevronRight, BarChart2, PieChart, TrendingDown,
   TrendingUp, CreditCard, DollarSign, ShieldAlert, ClipboardList, LifeBuoy,
 } from 'lucide-react';
@@ -26,7 +26,6 @@ const navItems: NavItem[] = [
 
   { id: 'chat-assessment',     label: 'Chat Assessment',     icon: ShieldAlert,     group: 'Moderation' },
   { id: 'report-evaluation',   label: 'Report Evaluation',   icon: ClipboardList,   group: 'Moderation' },
-  { id: 'reports-flags',       label: 'Reports & Flags',     icon: Flag,            group: 'Moderation' },
 
   { id: 'customer-service',    label: 'Customer Service',    icon: Headphones,      group: 'Support' },
   { id: 'support-tickets',     label: 'Support Tickets',     icon: LifeBuoy,        group: 'Support' },

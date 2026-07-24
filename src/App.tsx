@@ -12,7 +12,6 @@ import Scheduler from './pages/Scheduler';
 import UserManagement from './pages/UserManagement';
 import CustomerService from './pages/CustomerService';
 import Feedback from './pages/Feedback';
-import ReportsFlags from './pages/ReportsFlags';
 import Announcements from './pages/Announcements';
 import Settings from './pages/Settings';
 import SwipeAnalytics from './pages/SwipeAnalytics';
@@ -40,7 +39,6 @@ function PageRenderer({ page }: { page: Page }) {
     // Moderation
     case 'chat-assessment':     return <ChatAssessment />;
     case 'report-evaluation':   return <ReportEvaluation />;
-    case 'reports-flags':       return <ReportsFlags />;
     // Support
     case 'customer-service':    return <CustomerService />;
     case 'support-tickets':     return <SupportTickets />;

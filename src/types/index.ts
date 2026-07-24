@@ -11,7 +11,6 @@ export type Page =
   // Moderation
   | 'chat-assessment'
   | 'report-evaluation'
-  | 'reports-flags'
   // Support
   | 'customer-service'
   | 'support-tickets'
@@ -93,16 +92,6 @@ export interface FeedbackItem {
   comment: string;
   date: string;
   sentiment: 'positive' | 'neutral' | 'negative';
-}
-
-export interface ReportFlag {
-  id: string;
-  reporter: string;
-  reported: string;
-  reason: string;
-  status: 'pending' | 'reviewed' | 'dismissed' | 'actioned';
-  date: string;
-  severity: 'low' | 'medium' | 'high';
 }
 
 export interface MessageLogEntry {

@@ -61,7 +61,6 @@ const pageTitles: Record<string, string> = {
   'revenue':           'Revenue',
   'chat-assessment':   'Chat Assessment',
   'report-evaluation': 'Report Evaluation',
-  'reports-flags':     'Reports & Flags',
   'customer-service':  'Customer Service',
   'support-tickets':   'Support Tickets',
   'feedback':          'Feedback',
