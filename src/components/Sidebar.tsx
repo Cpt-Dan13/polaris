@@ -1,6 +1,6 @@
 ﻿import {
   LayoutDashboard, Bot, Clock,
-  Users, Headphones, Star, Megaphone, Sparkles, Settings,
+  Users, Headphones, Star, Megaphone, Sparkles,
   ChevronRight, BarChart2, PieChart, TrendingDown,
   TrendingUp, CreditCard, DollarSign, ShieldAlert, ClipboardList, LifeBuoy,
 } from 'lucide-react';
@@ -38,10 +38,9 @@ const navItems: NavItem[] = [
   { id: 'bot-management',      label: 'Bot Management',      icon: Bot,             group: 'Developer' },
   { id: 'scheduler',           label: 'Scheduler',           icon: Clock,           group: 'Developer' },
 
-  { id: 'settings',            label: 'Settings',            icon: Settings,        group: 'System' },
 ];
 
-const groups = ['Main', 'Analytics', 'Finance', 'Moderation', 'Support', 'Content', 'Users', 'Developer', 'System'];
+const groups = ['Main', 'Analytics', 'Finance', 'Moderation', 'Support', 'Content', 'Users', 'Developer'];
 
 interface SidebarProps {
   currentPage: Page;
