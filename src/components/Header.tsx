@@ -1,12 +1,25 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Sun, Moon, Bell, PanelLeftClose, PanelLeftOpen, Search,
   ShieldAlert, Flag, DollarSign, LifeBuoy, Bot, TrendingUp, User,
-  Settings, LogOut,
+  Settings, LogOut, Pencil,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import type { Page } from '../types';
+
+// ─── Avatar config ────────────────────────────────────────────────────────────
+
+const AVATAR_SEEDS = [
+  'Nova', 'Orion', 'Lyra', 'Vega', 'Draco',
+  'Atlas', 'Zephyr', 'Cosmo', 'Nebula', 'Pulsar',
+  'Quasar', 'Solaris', 'Titan', 'Celeste', 'Andromeda',
+];
+
+function avatarUrl(seed: string) {
+  return `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(seed)}`;
+}
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
@@ -82,22 +95,34 @@ interface HeaderProps {
 
 export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavigate }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
-  const { adminUser, signOut } = useAuth();
+  const { adminUser, signOut, updateAvatar } = useAuth();
 
-  const [notifOpen,   setNotifOpen]   = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [signingOut,  setSigningOut]  = useState(false);
-  const [notifs, setNotifs]           = useState<Notification[]>(INITIAL_NOTIFS);
+  const [notifOpen,    setNotifOpen]    = useState(false);
+  const [profileOpen,  setProfileOpen]  = useState(false);
+  const [signingOut,   setSigningOut]   = useState(false);
+  const [showPicker,   setShowPicker]   = useState(false);
+  const [savingAvatar, setSavingAvatar] = useState(false);
+  const [notifs, setNotifs]             = useState<Notification[]>(INITIAL_NOTIFS);
 
   const notifRef   = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifs.filter(n => !n.read).length;
 
-  // Avatar initials
+  // Avatar initials fallback
   const initials = adminUser?.full_name
     ? adminUser.full_name.charAt(0).toUpperCase()
     : (adminUser?.email?.charAt(0).toUpperCase() ?? 'A');
+
+  async function handlePickAvatar(seed: string) {
+    setSavingAvatar(true);
+    try {
+      await updateAvatar(seed);
+      setShowPicker(false);
+    } finally {
+      setSavingAvatar(false);
+    }
+  }
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -124,6 +149,7 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
   }
 
   return (
+    <>
     <header
       className="fixed top-0 right-0 z-20 flex items-center justify-between px-6 border-b transition-all duration-300"
       style={{
@@ -251,11 +277,18 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
         <div className="relative ml-1" ref={profileRef}>
           <button
             onClick={() => { setProfileOpen(o => !o); setNotifOpen(false); }}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-opacity"
-            style={{ background: ACCENT, color: '#fff', opacity: profileOpen ? 0.8 : 1 }}
+            className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold transition-opacity flex-shrink-0"
+            style={{
+              background: adminUser?.avatar_seed ? 'var(--bg)' : ACCENT,
+              color: '#fff',
+              opacity: profileOpen ? 0.8 : 1,
+              border: adminUser?.avatar_seed ? '2px solid var(--border)' : 'none',
+            }}
             title={adminUser?.full_name ?? 'Profile'}
           >
-            {initials}
+            {adminUser?.avatar_seed ? (
+              <img src={avatarUrl(adminUser.avatar_seed)} alt="avatar" className="w-full h-full" />
+            ) : initials}
           </button>
 
           {profileOpen && (
@@ -264,12 +297,38 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
               style={{ top: 'calc(100% + 8px)', width: 210, background: 'var(--card)', border: '1px solid var(--border)', zIndex: 50 }}
             >
               {/* Identity */}
-              <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-                <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
-                  {adminUser?.full_name ?? 'Admin'}
+              <div className="px-4 py-3 flex items-center gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
+                {/* Avatar with pencil overlay */}
+                <div className="relative flex-shrink-0 group">
+                  <div
+                    className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold"
+                    style={{
+                      background: adminUser?.avatar_seed ? 'var(--bg)' : ACCENT,
+                      color: '#fff',
+                      border: adminUser?.avatar_seed ? '2px solid var(--border)' : 'none',
+                    }}
+                  >
+                    {adminUser?.avatar_seed ? (
+                      <img src={avatarUrl(adminUser.avatar_seed)} alt="avatar" className="w-full h-full" />
+                    ) : initials}
+                  </div>
+                  <button
+                    onClick={() => { setShowPicker(true); setProfileOpen(false); }}
+                    className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center transition-transform hover:scale-110"
+                    style={{ background: ACCENT }}
+                    title="Change avatar"
+                  >
+                    <Pencil size={8} color="#fff" />
+                  </button>
                 </div>
-                <div className="text-xs mt-0.5 truncate capitalize" style={{ color: 'var(--text-secondary)' }}>
-                  {adminUser?.role?.replace(/_/g, ' ')}
+
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
+                    {adminUser?.full_name ?? 'Admin'}
+                  </div>
+                  <div className="text-xs mt-0.5 truncate capitalize" style={{ color: 'var(--text-secondary)' }}>
+                    {adminUser?.role?.replace(/_/g, ' ')}
+                  </div>
                 </div>
               </div>
 
@@ -298,5 +357,71 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
         </div>
       </div>
     </header>
+
+    {/* Avatar picker modal */}
+    {showPicker && createPortal(
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{ background: 'rgba(0,0,0,0.55)' }}
+        onClick={() => !savingAvatar && setShowPicker(false)}
+      >
+        <div
+          className="card rounded-2xl p-6"
+          style={{ width: 360, boxShadow: '0 24px 48px rgba(0,0,0,0.4)' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <h3 className="text-sm font-bold mb-1" style={{ color: 'var(--text)' }}>Choose your droid</h3>
+          <p className="text-xs mb-5" style={{ color: 'var(--text-light)' }}>
+            Pick a robot avatar for your Polaris profile.
+          </p>
+
+          <div className="grid grid-cols-5 gap-3 mb-5">
+            {AVATAR_SEEDS.map(seed => {
+              const selected = adminUser?.avatar_seed === seed;
+              return (
+                <button
+                  key={seed}
+                  disabled={savingAvatar}
+                  onClick={() => handlePickAvatar(seed)}
+                  title={seed}
+                  className="rounded-xl p-1.5 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                  style={{
+                    background: selected ? `${ACCENT}18` : 'var(--bg)',
+                    border: `2px solid ${selected ? ACCENT : 'var(--border)'}`,
+                  }}
+                >
+                  <img
+                    src={avatarUrl(seed)}
+                    alt={seed}
+                    className="w-full aspect-square"
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <button
+              disabled={savingAvatar || !adminUser?.avatar_seed}
+              onClick={() => handlePickAvatar('')}
+              className="text-xs font-medium transition-opacity disabled:opacity-30"
+              style={{ color: 'var(--text-light)' }}
+            >
+              Remove avatar
+            </button>
+            <button
+              disabled={savingAvatar}
+              onClick={() => setShowPicker(false)}
+              className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all hover:brightness-90"
+              style={{ background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+            >
+              {savingAvatar ? 'Saving…' : 'Cancel'}
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    )}
+    </>
   );
 }

@@ -4,11 +4,12 @@ import { supabase } from '../lib/supabase'
 import { api, type AdminUser } from '../lib/api'
 
 interface AuthContextValue {
-  session:   Session | null
-  adminUser: AdminUser | null
-  loading:   boolean
-  signIn:    (email: string, password: string) => Promise<string | null>
-  signOut:   () => Promise<void>
+  session:      Session | null
+  adminUser:    AdminUser | null
+  loading:      boolean
+  signIn:       (email: string, password: string) => Promise<string | null>
+  signOut:      () => Promise<void>
+  updateAvatar: (seed: string | null) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -62,8 +63,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAdminUser(null)
   }
 
+  async function updateAvatar(seed: string | null) {
+    await api.updateAvatar(seed)
+    setAdminUser(prev => prev ? { ...prev, avatar_seed: seed } : prev)
+  }
+
   return (
-    <AuthContext.Provider value={{ session, adminUser, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, adminUser, loading, signIn, signOut, updateAvatar }}>
       {children}
     </AuthContext.Provider>
   )

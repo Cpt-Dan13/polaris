@@ -27,6 +27,11 @@ async function request<T = unknown>(
 
 export const api = {
   me: () => request<{ data: AdminUser }>('/me'),
+  updateAvatar: (seed: string | null) =>
+    request<{ success: boolean; avatar_seed: string | null }>('/me/avatar', {
+      method: 'PATCH',
+      body:   JSON.stringify({ seed }),
+    }),
 
   analytics: {
     engagement:        () => request('/analytics/engagement'),
@@ -354,6 +359,7 @@ export interface AdminUser {
   role:         'viewer' | 'support' | 'moderator' | 'admin' | 'super_admin'
   created_at:   string
   last_seen_at: string | null
+  avatar_seed:  string | null
 }
 
 // ── Chat Assessment ───────────────────────────────────────────────────────────
