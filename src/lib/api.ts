@@ -351,7 +351,7 @@ export interface AdminUser {
   user_id:      string
   email:        string
   full_name:    string | null
-  role:         'viewer' | 'support' | 'super_admin'
+  role:         'viewer' | 'support' | 'moderator' | 'admin' | 'super_admin'
   created_at:   string
   last_seen_at: string | null
 }
