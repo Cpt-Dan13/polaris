@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, Filter, UserX, UserCheck, Mail, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api';
 import Badge from '../components/Badge';
@@ -64,6 +65,7 @@ export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [tierFilter,   setTierFilter]   = useState('all');
   const [togglingId,   setTogglingId]   = useState<string | null>(null);
+  const [showWipModal, setShowWipModal] = useState(false);
   const [page,         setPage]         = useState(1);
   const [pageSize,     setPageSize]     = useState<typeof PAGE_SIZES[number]>(20);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -118,6 +120,7 @@ export default function UserManagement() {
   };
 
   return (
+    <>
     <div className="space-y-4">
 
       {/* ── Toolbar ── */}
@@ -300,19 +303,17 @@ export default function UserManagement() {
                           className="p-1.5 rounded transition-colors"
                           style={{ color: 'var(--text-secondary)' }}
                           title="Email"
+                          onClick={() => setShowWipModal(true)}
                         >
                           <Mail size={13} />
                         </button>
                         <button
                           className="p-1.5 rounded transition-colors"
                           style={{
-                            color:   user.is_paused ? '#4caf50' : '#f44336',
-                            opacity: togglingId === user.id ? 0.5 : 1,
-                            cursor:  togglingId === user.id ? 'not-allowed' : 'pointer',
+                            color:  user.is_paused ? '#4caf50' : '#f44336',
                           }}
                           title={user.is_paused ? 'Activate' : 'Pause'}
-                          onClick={() => togglePause(user)}
-                          disabled={togglingId === user.id}
+                          onClick={() => setShowWipModal(true)}
                         >
                           {user.is_paused ? <UserCheck size={13} /> : <UserX size={13} />}
                         </button>
@@ -411,5 +412,35 @@ export default function UserManagement() {
         )}
       </div>
     </div>
+
+    {/* WIP modal */}
+    {showWipModal && createPortal(
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{ background: 'rgba(0,0,0,0.55)' }}
+        onClick={() => setShowWipModal(false)}
+      >
+        <div
+          className="card p-8 flex flex-col items-center gap-3 rounded-2xl"
+          style={{ maxWidth: 340, width: '90%', boxShadow: '0 24px 48px rgba(0,0,0,0.4)' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <span style={{ fontSize: 48, lineHeight: 1 }}>🚧</span>
+          <h3 className="text-base font-bold" style={{ color: 'var(--text)' }}>Work in Progress</h3>
+          <p className="text-sm text-center" style={{ color: 'var(--text-light)' }}>
+            This feature is under active development.
+          </p>
+          <button
+            onClick={() => setShowWipModal(false)}
+            className="mt-2 px-5 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
+            style={{ background: ACCENT }}
+          >
+            Got it
+          </button>
+        </div>
+      </div>,
+      document.body,
+    )}
+    </>
   );
 }
