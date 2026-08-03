@@ -606,23 +606,20 @@ export default function ChatAssessment() {
                 {/* Actions */}
                 <div className="flex gap-2 flex-wrap items-center">
                   <button
-                    disabled={isActioning}
-                    onClick={() => handleAction(flag.id, 'approve')}
-                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
+                    onClick={() => setShowWipModal(true)}
+                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
                     style={{ background: GREEN }}>
                     Approve
                   </button>
                   <button
-                    disabled={isActioning}
-                    onClick={() => handleAction(flag.id, 'escalate')}
-                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
+                    onClick={() => setShowWipModal(true)}
+                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
                     style={{ background: GOLD }}>
                     Escalate
                   </button>
                   <button
-                    disabled={isActioning}
-                    onClick={() => handleAction(flag.id, 'ban')}
-                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
+                    onClick={() => setShowWipModal(true)}
+                    className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
                     style={{ background: RED }}>
                     Ban User
                   </button>
