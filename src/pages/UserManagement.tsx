@@ -1,11 +1,41 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Filter, UserX, UserCheck, Mail, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, UserX, UserCheck, Mail, Loader2, ChevronLeft, ChevronRight, CheckCircle2, ChevronDown } from 'lucide-react';
 import { api } from '../lib/api';
 import Badge from '../components/Badge';
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
+
+const SUBJECT_SUGGESTIONS = [
+  'Scheduled Maintenance Window',
+  'Emergency Maintenance Notice',
+  'Service Interruption Update',
+  'App Update Available',
+  'Community Guidelines Update',
+  'Terms of Service Update',
+  'Privacy Policy Update',
+  'Important Safety Notice',
+  'New Feature Alert',
+  'Constellation Mode Update',
+  'Exciting New Features Are Live',
+  'App Improvements & Bug Fixes',
+  'Exclusive Offer for Orbit Members',
+  'Exclusive Offer for Nova Members',
+  'Exclusive Offer for Supernova Members',
+  'Subscription Renewal Reminder',
+  'Limited Time Upgrade Offer',
+  'Complete Your Profile',
+  'Your Constellation Is Growing',
+  'New Matches Are Waiting',
+  'Tips to Improve Your Experience',
+  'Important Account Notice',
+  'Account Security Update',
+  'Verify Your Profile',
+  'Welcome to Constell8tion',
+  'A Message from the Team',
+  "We'd Love Your Feedback",
+];
 
 const PAGE_SIZES = [10, 20, 50, 100] as const;
 
@@ -64,8 +94,15 @@ export default function UserManagement() {
   const [search,       setSearch]       = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [tierFilter,   setTierFilter]   = useState('all');
-  const [togglingId,   setTogglingId]   = useState<string | null>(null);
-  const [showWipModal, setShowWipModal] = useState(false);
+  const [togglingId,    setTogglingId]    = useState<string | null>(null);
+  const [showWipModal,  setShowWipModal]  = useState(false);
+  const [composeUser,   setComposeUser]   = useState<UserProfile | null>(null);
+  const [compSubject,   setCompSubject]   = useState('');
+  const [compBody,      setCompBody]      = useState('');
+  const [compSending,         setCompSending]         = useState(false);
+  const [compSent,            setCompSent]            = useState(false);
+  const [compError,           setCompError]           = useState<string | null>(null);
+  const [showSubjectSuggest,  setShowSubjectSuggest]  = useState(false);
   const [page,         setPage]         = useState(1);
   const [pageSize,     setPageSize]     = useState<typeof PAGE_SIZES[number]>(20);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -106,6 +143,37 @@ export default function UserManagement() {
     );
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [search, statusFilter, tierFilter, page, pageSize]);
+
+  const openCompose = (user: UserProfile) => {
+    setComposeUser(user);
+    setCompSubject('A message from Constell8tion');
+    setCompBody('');
+    setCompSent(false);
+    setCompError(null);
+  };
+
+  const closeCompose = () => {
+    setComposeUser(null);
+    setCompSending(false);
+    setCompSent(false);
+    setCompError(null);
+    setShowSubjectSuggest(false);
+  };
+
+  const handleSendEmail = async () => {
+    if (!composeUser || !compSubject.trim() || !compBody.trim()) return;
+    setCompSending(true);
+    setCompError(null);
+    try {
+      await api.email.sendToUser(composeUser.id, compSubject, compBody);
+      setCompSent(true);
+      setTimeout(closeCompose, 2000);
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : 'Failed to send email');
+    } finally {
+      setCompSending(false);
+    }
+  };
 
   const togglePause = async (user: UserProfile) => {
     setTogglingId(user.id);
@@ -302,8 +370,8 @@ export default function UserManagement() {
                         <button
                           className="p-1.5 rounded transition-colors"
                           style={{ color: 'var(--text-secondary)' }}
-                          title="Email"
-                          onClick={() => setShowWipModal(true)}
+                          title="Email user"
+                          onClick={() => openCompose(user)}
                         >
                           <Mail size={13} />
                         </button>
@@ -412,6 +480,153 @@ export default function UserManagement() {
         )}
       </div>
     </div>
+
+    {/* Compose email modal */}
+    {composeUser && createPortal(
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{ background: 'rgba(0,0,0,0.55)' }}
+        onClick={() => !compSending && closeCompose()}
+      >
+        <div
+          className="card rounded-2xl p-6 space-y-4"
+          style={{ width: 440, maxWidth: '92vw', boxShadow: '0 24px 48px rgba(0,0,0,0.4)' }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center gap-2">
+            <Mail size={15} style={{ color: ACCENT }} />
+            <h3 className="text-sm font-bold" style={{ color: 'var(--text)' }}>
+              Email '{displayName(composeUser)}'
+            </h3>
+          </div>
+
+          {/* Recipient (readonly) */}
+          <div>
+            <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-secondary)' }}>To</label>
+            <div
+              className="w-full px-3 py-2 rounded-md text-xs"
+              style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+            >
+              {composeUser.email}
+            </div>
+          </div>
+
+          {/* Subject */}
+          <div>
+            <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-secondary)' }}>Subject</label>
+            <div className="relative">
+              <input
+                className="w-full pl-3 pr-9 py-2 rounded-md text-sm outline-none"
+                style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
+                value={compSubject}
+                onChange={e => { setCompSubject(e.target.value); setShowSubjectSuggest(true); }}
+                onFocus={() => setShowSubjectSuggest(true)}
+                onBlur={() => setTimeout(() => setShowSubjectSuggest(false), 120)}
+                onKeyDown={e => { if (e.key === 'Escape') setShowSubjectSuggest(false); }}
+                disabled={compSending || compSent}
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                onMouseDown={e => { e.preventDefault(); setShowSubjectSuggest(v => !v); }}
+                className="absolute right-2.5 top-1/2"
+                style={{
+                  color: 'var(--text-light)',
+                  transform: `translateY(-50%) rotate(${showSubjectSuggest ? 180 : 0}deg)`,
+                  transition: 'transform 0.15s',
+                }}
+                tabIndex={-1}
+                disabled={compSending || compSent}
+              >
+                <ChevronDown size={14} />
+              </button>
+
+              {showSubjectSuggest && !compSending && !compSent && (() => {
+                const matches = SUBJECT_SUGGESTIONS.filter(s =>
+                  compSubject.trim() === '' || s.toLowerCase().includes(compSubject.toLowerCase())
+                );
+                return matches.length > 0 ? (
+                  <div
+                    className="absolute left-0 right-0 z-20 rounded-md overflow-hidden"
+                    style={{
+                      top: 'calc(100% + 4px)',
+                      background: 'var(--card)',
+                      border: '1px solid var(--border)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                      maxHeight: 200,
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {matches.map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onMouseDown={e => { e.preventDefault(); setCompSubject(s); setShowSubjectSuggest(false); }}
+                        className="w-full text-left px-3 py-2 text-sm transition-colors hover:brightness-110"
+                        style={{
+                          color:      compSubject === s ? ACCENT : 'var(--text)',
+                          background: compSubject === s ? `${ACCENT}12` : 'transparent',
+                        }}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          </div>
+
+          {/* Body */}
+          <div>
+            <label className="text-xs font-medium block mb-1" style={{ color: 'var(--text-secondary)' }}>Message</label>
+            <textarea
+              className="w-full px-3 py-2 rounded-md text-sm outline-none resize-none"
+              style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)' }}
+              rows={5}
+              placeholder="Write your message…"
+              value={compBody}
+              onChange={e => setCompBody(e.target.value)}
+              disabled={compSending || compSent}
+            />
+          </div>
+
+          {/* Error */}
+          {compError && (
+            <p className="text-xs px-3 py-2 rounded-md" style={{ background: `${ACCENT}15`, color: ACCENT }}>
+              {compError}
+            </p>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button
+              onClick={closeCompose}
+              disabled={compSending}
+              className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40"
+              style={{ background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSendEmail}
+              disabled={!compSubject.trim() || !compBody.trim() || compSending || compSent}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all disabled:opacity-40"
+              style={{ background: compSent ? '#4caf50' : ACCENT }}
+            >
+              {compSent
+                ? <><CheckCircle2 size={12} /> Sent!</>
+                : compSending
+                  ? <><Loader2 size={12} className="animate-spin" /> Sending…</>
+                  : <><Mail size={12} /> Send</>
+              }
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    )}
 
     {/* WIP modal */}
     {showWipModal && createPortal(

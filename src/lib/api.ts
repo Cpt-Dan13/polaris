@@ -137,6 +137,25 @@ export const api = {
     patch:     (id: string, body: Record<string, unknown>) =>
       request(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   },
+
+  email: {
+    sendAnnouncement: (title: string, body: string, audience: string) =>
+      request<{ sent_count: number; failed_count: number }>('/email/announcement', {
+        method: 'POST',
+        body:   JSON.stringify({ title, body, audience }),
+      }),
+    announcements: (params?: { limit?: number; offset?: number }) => {
+      const q = params ? `?${new URLSearchParams(
+        Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]))
+      )}` : ''
+      return request<{ data: Announcement[]; count: number }>(`/email/announcements${q}`)
+    },
+    sendToUser: (id: string, subject: string, body: string) =>
+      request<{ success: boolean }>(`/email/user/${id}`, {
+        method: 'POST',
+        body:   JSON.stringify({ subject, body }),
+      }),
+  },
 }
 
 export interface DistBucket { label: string; pct: number }
@@ -349,6 +368,18 @@ export interface SwipeAnalyticsData {
     muse:          { swipes: number; like_rate: number; match_rate: number; avg_daily: number }
     constellation: { swipes: number; like_rate: number; match_rate: number; avg_daily: number }
   }
+}
+
+export interface Announcement {
+  id:            string
+  title:         string
+  body:          string
+  audience:      'all' | 'orbit' | 'nova' | 'supernova'
+  sent_count:    number
+  failed_count:  number
+  sent_by:       string | null
+  sent_by_admin: { full_name: string | null } | null
+  created_at:    string
 }
 
 export interface AdminUser {
