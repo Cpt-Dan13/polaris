@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LifeBuoy, AlertOctagon, Clock, CheckCircle, ChevronDown, ArrowUpCircle, Copy, Check } from 'lucide-react';
-import { tickets, POLARIS_ADMIN_USERS } from '../data/sampleData';
-import type { Ticket } from '../types';
+import { POLARIS_ADMIN_USERS } from '../data/sampleData';
+import { api, type SupportTicket } from '../lib/api';
 
 const ACCENT  = '#e94560';
 const GOLD    = '#c8972b';
@@ -20,14 +20,14 @@ function formatDate(raw: string): string {
   });
 }
 
-const PRIORITY_META: Record<Ticket['priority'], { color: string; bg: string; order: number }> = {
+const PRIORITY_META: Record<SupportTicket['priority'], { color: string; bg: string; order: number }> = {
   urgent: { color: RED,    bg: 'rgba(244,67,54,0.12)',   order: 0 },
   high:   { color: ACCENT, bg: `${ACCENT}18`,             order: 1 },
   medium: { color: GOLD,   bg: `${GOLD}20`,              order: 2 },
   low:    { color: GREEN,  bg: 'rgba(76,175,80,0.12)',   order: 3 },
 };
 
-const STATUS_META: Record<Ticket['status'], { label: string; color: string; bg: string }> = {
+const STATUS_META: Record<SupportTicket['status'], { label: string; color: string; bg: string }> = {
   'open':        { label: 'Open',        color: GOLD,   bg: `${GOLD}20`               },
   'in-progress': { label: 'In Progress', color: PURPLE, bg: `${PURPLE}18`             },
   'resolved':    { label: 'Resolved',    color: GREEN,  bg: 'rgba(76,175,80,0.12)'   },
@@ -35,24 +35,29 @@ const STATUS_META: Record<Ticket['status'], { label: string; color: string; bg: 
 };
 
 export default function SupportTickets() {
-  const [items, setItems] = useState<Ticket[]>(tickets);
-  const [statusFilter, setStatusFilter] = useState<Ticket['status'] | 'all'>('all');
+  const [items,        setItems]        = useState<SupportTicket[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<SupportTicket['status'] | 'all'>('all');
+  const [assignees,    setAssignees]    = useState<Record<string, string | null>>({});
+  const [copiedId,     setCopiedId]     = useState<string | null>(null);
+  const [showWip,      setShowWip]      = useState(false);
 
-  // Per-ticket assignee state — keyed by ticket id, value is admin user id or null
-  const [assignees, setAssignees] = useState<Record<string, string | null>>(
-    () => Object.fromEntries(items.map(t => [t.id, t.assigned_to ?? null])),
-  );
-  const [copiedId,  setCopiedId]  = useState<string | null>(null);
-  const [showWip,   setShowWip]   = useState(false);
+  useEffect(() => {
+    api.support.list({ limit: 100 })
+      .then(({ data }) => {
+        setItems(data);
+        setAssignees(Object.fromEntries(data.map(t => [t.id, t.assigned_to])));
+      })
+      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load tickets'))
+      .finally(() => setLoading(false));
+  }, []);
 
   function copyEmail(id: string, email: string) {
     navigator.clipboard.writeText(email);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   }
-
-  const updateStatus = (id: string, status: Ticket['status']) =>
-    setItems(prev => prev.map(t => t.id === id ? { ...t, status } : t));
 
   const sorted = [...items].sort((a, b) =>
     PRIORITY_META[a.priority].order - PRIORITY_META[b.priority].order,
@@ -74,12 +79,21 @@ export default function SupportTickets() {
     { label: 'Urgent',      value: urgentCount,   color: RED,    bg: 'rgba(244,67,54,0.12)', icon: AlertOctagon },
   ];
 
-  const priCounts = {
-    urgent: items.filter(t => t.priority === 'urgent').length,
-    high:   items.filter(t => t.priority === 'high').length,
-    medium: items.filter(t => t.priority === 'medium').length,
-    low:    items.filter(t => t.priority === 'low').length,
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24" style={{ color: 'var(--text-light)' }}>
+        Loading tickets…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="card p-8 text-center" style={{ color: RED }}>
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -103,35 +117,6 @@ export default function SupportTickets() {
         })}
       </div>
 
-      {/* Priority Distribution */}
-      <div className="card p-5">
-        <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>
-          Priority Breakdown —{' '}
-          <span style={{ color: 'var(--text-light)', fontWeight: 400 }}>{items.length} total tickets</span>
-        </h3>
-        <div className="flex h-2.5 rounded-full overflow-hidden gap-px mb-4">
-          {(['urgent', 'high', 'medium', 'low'] as const).map(p => (
-            <div key={p}
-                 style={{ width: `${(priCounts[p] / items.length * 100).toFixed(1)}%`, background: PRIORITY_META[p].color }}
-                 title={`${p}: ${priCounts[p]}`} />
-          ))}
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {(['urgent', 'high', 'medium', 'low'] as const).map(p => (
-            <div key={p} className="p-3 rounded-lg flex items-center gap-2.5"
-                 style={{ background: 'var(--bg)' }}>
-              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                   style={{ background: PRIORITY_META[p].color }} />
-              <div>
-                <div className="text-xs capitalize" style={{ color: 'var(--text-secondary)' }}>{p}</div>
-                <div className="text-lg font-black" style={{ color: PRIORITY_META[p].color }}>
-                  {priCounts[p]}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Filters */}
       <div className="flex gap-4 flex-wrap">
@@ -173,7 +158,7 @@ export default function SupportTickets() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-mono font-bold"
                           style={{ color: 'var(--text-secondary)' }}>
-                      {ticket.id}
+                      #{ticket.ref}
                     </span>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                           style={{ background: sm.bg, color: sm.color }}>
@@ -187,14 +172,10 @@ export default function SupportTickets() {
                     )}
                   </div>
                   <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-light)' }}>
-                    {formatDate(ticket.created)}
+                    {formatDate(ticket.created_at)}
                   </span>
                 </div>
 
-                {/* Subject */}
-                <div className="text-sm font-semibold mb-3" style={{ color: 'var(--text)' }}>
-                  {ticket.subject}
-                </div>
 
                 {/* Message body */}
                 {ticket.message && (
@@ -215,22 +196,22 @@ export default function SupportTickets() {
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div>
                     <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)' }}>Submitted by</div>
-                    <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{ticket.user}</div>
-                    {ticket.contact_email && (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-[11px]" style={{ color: 'var(--text-light)' }}>
-                          {ticket.contact_email}
-                        </span>
-                        <button
-                          onClick={() => copyEmail(ticket.id, ticket.contact_email!)}
-                          title="Copy email"
-                          className="flex items-center justify-center transition-colors"
-                          style={{ color: copiedId === ticket.id ? GREEN : 'var(--text-light)', lineHeight: 1 }}
-                        >
-                          {copiedId === ticket.id ? <Check size={11} /> : <Copy size={11} />}
-                        </button>
-                      </div>
-                    )}
+                    <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
+                      {ticket.name ?? '—'}
+                    </div>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="text-[11px]" style={{ color: 'var(--text-light)' }}>
+                        {ticket.contact_email}
+                      </span>
+                      <button
+                        onClick={() => copyEmail(ticket.id, ticket.contact_email)}
+                        title="Copy email"
+                        className="flex items-center justify-center transition-colors"
+                        style={{ color: copiedId === ticket.id ? GREEN : 'var(--text-light)', lineHeight: 1 }}
+                      >
+                        {copiedId === ticket.id ? <Check size={11} /> : <Copy size={11} />}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs mb-1" style={{ color: 'var(--text-light)' }}>Assigned to</div>

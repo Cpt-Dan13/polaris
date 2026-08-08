@@ -138,6 +138,24 @@ export const api = {
       request(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   },
 
+  support: {
+    list: (params?: { status?: string; priority?: string; limit?: number; offset?: number }) => {
+      const q = params ? `?${new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(params)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, String(v)])
+        )
+      )}` : ''
+      return request<{ data: SupportTicket[]; count: number }>(`/support${q}`)
+    },
+    update: (id: string, patch: { status?: string; assigned_to?: string | null }) =>
+      request<{ success: boolean }>(`/support/${id}`, {
+        method: 'PATCH',
+        body:   JSON.stringify(patch),
+      }),
+  },
+
   email: {
     sendAnnouncement: (title: string, body: string, audience: string) =>
       request<{ sent_count: number; failed_count: number }>('/email/announcement', {
@@ -156,6 +174,21 @@ export const api = {
         body:   JSON.stringify({ subject, body }),
       }),
   },
+}
+
+export interface SupportTicket {
+  id:               string
+  ref:              string
+  contact_email:    string
+  associated_email: string | null
+  name:             string | null
+  category:         string | null
+  message:          string | null
+  status:           'open' | 'in-progress' | 'resolved' | 'closed'
+  priority:         'low' | 'medium' | 'high' | 'urgent'
+  assigned_to:      string | null
+  created_at:       string
+  updated_at:       string
 }
 
 export interface DistBucket { label: string; pct: number }
