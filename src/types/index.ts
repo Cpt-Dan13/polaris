@@ -77,11 +77,15 @@ export interface User {
 export interface Ticket {
   id: string;
   user: string;
+  contact_email?: string;
   subject: string;
+  category?: string;
+  message?: string;
   status: 'open' | 'in-progress' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   created: string;
-  assignedBot: string;
+  assignedBot: string;         // kept for CustomerService compat
+  assigned_to?: string | null; // admin user id — used in SupportTickets dropdown
 }
 
 export interface FeedbackItem {

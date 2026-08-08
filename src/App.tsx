@@ -58,7 +58,7 @@ function PageRenderer({ page }: { page: Page }) {
 }
 
 function AppShell() {
-  const { session, loading } = useAuth();
+  const { session, loading, verifying } = useAuth();
   const [currentPage, setCurrentPage] = useState<Page>('overview');
 
   if (loading) {
@@ -77,7 +77,9 @@ function AppShell() {
     );
   }
 
-  if (!session) return <Login />;
+  // While verifying admin status after sign-in, stay on Login so the button
+  // keeps its loading state — no dashboard flash, no separate "verifying" page.
+  if (!session || verifying) return <Login />;
 
   return (
     <Layout currentPage={currentPage} onNavigate={setCurrentPage}>

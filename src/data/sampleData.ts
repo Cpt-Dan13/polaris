@@ -118,15 +118,70 @@ export const users: User[] = [
   { id: 'u10', name: 'Sam Harris', email: 'sam_h@mail.com', plan: 'Premium', status: 'active', joined: '2024-05-20', messages: 178, lastSeen: '45 min ago', country: 'NZ' },
 ];
 
+// Mock admin users — replace with api.support.admins() once live
+export const POLARIS_ADMIN_USERS = [
+  { id: 'a1', full_name: 'Daniel Reyes', initials: 'DR', role: 'admin'   },
+  { id: 'a2', full_name: 'Sofia Carver', initials: 'SC', role: 'support' },
+  { id: 'a3', full_name: 'Marcus Webb',  initials: 'MW', role: 'support' },
+];
+
 export const tickets: Ticket[] = [
-  { id: 'T-1001', user: 'Jake Morrison', subject: 'Billing charge discrepancy', status: 'open', priority: 'high', created: '2024-06-14 09:12', assignedBot: 'Isla Seraphin' },
-  { id: 'T-1002', user: 'Carlos Mendez', subject: 'Cannot send messages after upgrade', status: 'in-progress', priority: 'urgent', created: '2024-06-14 08:40', assignedBot: 'Elena Rossi' },
-  { id: 'T-1003', user: 'Tommy Kim', subject: 'Account verification pending', status: 'open', priority: 'medium', created: '2024-06-13 22:05', assignedBot: '—' },
-  { id: 'T-1004', user: 'Ryan Parker', subject: 'Profile photos not loading', status: 'resolved', priority: 'low', created: '2024-06-13 17:33', assignedBot: 'Aurora Solstice' },
-  { id: 'T-1005', user: 'Oliver Davis', subject: 'Request for data export', status: 'in-progress', priority: 'medium', created: '2024-06-13 14:18', assignedBot: 'Lyra Belrose' },
-  { id: 'T-1006', user: 'Sam Harris', subject: 'Match algorithm not working', status: 'open', priority: 'high', created: '2024-06-13 11:00', assignedBot: '—' },
-  { id: 'T-1007', user: 'Brendan Cole', subject: 'Premium features inaccessible', status: 'closed', priority: 'medium', created: '2024-06-12 16:45', assignedBot: 'Isla Seraphin' },
-  { id: 'T-1008', user: 'Devin Kowalski', subject: 'Appeal account suspension', status: 'in-progress', priority: 'high', created: '2024-06-12 09:20', assignedBot: 'Elena Rossi' },
+  {
+    id: 'T-1001', user: 'Jake Morrison', contact_email: 'jake_92@mail.com',
+    subject: 'Billing charge discrepancy', category: 'Billing & Payments',
+    message: 'I was charged twice for the Nova subscription this month. My bank statement shows two separate charges of $29.99 on June 8th and June 9th. I only authorized one payment. Please refund the duplicate charge as soon as possible.',
+    status: 'open', priority: 'high', created: '2024-06-14 09:12',
+    assignedBot: 'Isla Seraphin', assigned_to: 'a1',
+  },
+  {
+    id: 'T-1002', user: 'Carlos Mendez', contact_email: 'carlos_m@mail.com',
+    subject: 'Cannot send messages after upgrade', category: 'Subscription & Upgrades',
+    message: 'I just upgraded to the Supernova plan but I still cannot send messages to my matches. It keeps showing me a paywall screen even though I already paid. My subscription shows as active in account settings but the feature is not unlocking.',
+    status: 'in-progress', priority: 'urgent', created: '2024-06-14 08:40',
+    assignedBot: 'Elena Rossi', assigned_to: 'a2',
+  },
+  {
+    id: 'T-1003', user: 'Tommy Kim', contact_email: 'tommy_k@mail.com',
+    subject: 'Account verification pending', category: 'Sign-in & Authentication',
+    message: 'I submitted my ID verification 5 days ago and it still shows as pending. I have tried re-submitting but the app will not let me. My profile features are limited and I cannot fully use the app. Can you check what is happening?',
+    status: 'open', priority: 'medium', created: '2024-06-13 22:05',
+    assignedBot: '—', assigned_to: null,
+  },
+  {
+    id: 'T-1004', user: 'Ryan Parker', contact_email: 'ryanp_88@mail.com',
+    subject: 'Profile photos not loading', category: 'Photo & Media Upload',
+    message: 'My profile photos stopped loading yesterday. Other users cannot see them and my profile just shows broken image icons. I tried uploading new photos but the same issue happens. Already cleared cache and tested on two different devices.',
+    status: 'resolved', priority: 'low', created: '2024-06-13 17:33',
+    assignedBot: 'Aurora Solstice', assigned_to: 'a3',
+  },
+  {
+    id: 'T-1005', user: 'Oliver Davis', contact_email: 'oliver_d@mail.com',
+    subject: 'Request for data export', category: 'Privacy & Data',
+    message: 'I would like to formally request a complete export of my personal data in accordance with GDPR. This should include my profile information, messages, match history, and any other data associated with my account. Please let me know the expected timeline.',
+    status: 'in-progress', priority: 'medium', created: '2024-06-13 14:18',
+    assignedBot: 'Lyra Belrose', assigned_to: 'a2',
+  },
+  {
+    id: 'T-1006', user: 'Sam Harris', contact_email: 'sam_h@mail.com',
+    subject: 'Match algorithm not working', category: 'Matching & Discovery',
+    message: 'For the past week I have been seeing the same profiles over and over, including people I have already passed on. The discovery feed does not seem to be refreshing with new people. I have adjusted my distance and age filters but nothing changes.',
+    status: 'open', priority: 'high', created: '2024-06-13 11:00',
+    assignedBot: '—', assigned_to: null,
+  },
+  {
+    id: 'T-1007', user: 'Brendan Cole', contact_email: 'brendan@mail.com',
+    subject: 'Premium features inaccessible', category: 'Subscription & Upgrades',
+    message: 'After upgrading to Nova my boost feature still shows as locked and the constellation mode is unavailable even though both are listed as Nova benefits. This has been happening for 3 days. My payment confirmation email came through successfully.',
+    status: 'closed', priority: 'medium', created: '2024-06-12 16:45',
+    assignedBot: 'Isla Seraphin', assigned_to: 'a1',
+  },
+  {
+    id: 'T-1008', user: 'Devin Kowalski', contact_email: 'devink@mail.com',
+    subject: 'Appeal account suspension', category: 'Account & Profile',
+    message: 'My account was suspended without any prior warning or explanation. I have not violated any terms of service and have been using the app responsibly. I want to formally appeal this suspension and understand what policy I allegedly broke.',
+    status: 'in-progress', priority: 'high', created: '2024-06-12 09:20',
+    assignedBot: 'Elena Rossi', assigned_to: 'a2',
+  },
 ];
 
 export const feedbackItems: FeedbackItem[] = [

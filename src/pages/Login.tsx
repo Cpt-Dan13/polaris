@@ -1,27 +1,37 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Star, AlertCircle, Loader } from 'lucide-react'
 
 const ACCENT = '#e94560'
 
 export default function Login() {
-  const { signIn } = useAuth()
+  const { signIn, adminError, verifying } = useAuth()
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState<string | null>(null)
-  const [loading,  setLoading]  = useState(false)
+  const [busy,     setBusy]     = useState(false)
+
+  // Button stays in isLoading state during both the auth call and the admin check.
+  const isLoading = busy || verifying
+  const displayError = adminError ?? error
+
+  // When adminError lands, the auth flow is done — stop the spinner.
+  useEffect(() => {
+    if (adminError) setBusy(false)
+  }, [adminError])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    setLoading(true)
+    setBusy(true)
 
     const err = await signIn(email.trim(), password)
     if (err) {
-      setError(err === 'Invalid login credentials' ? 'Incorrect email or password.' : err)
-      setLoading(false)
+      setError(err)
+      setBusy(false)
     }
-    // On success, AuthContext sets session → App.tsx renders the dashboard
+    // On success: don't clear busy — verifying takes over and keeps button isLoading
+    // until admin check resolves, then AppShell switches to the dashboard.
   }
 
   return (
@@ -122,7 +132,7 @@ export default function Login() {
             </div>
 
             {/* Error */}
-            {error && (
+            {displayError && (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -135,14 +145,14 @@ export default function Login() {
                 fontSize: 13,
               }}>
                 <AlertCircle size={15} style={{ flexShrink: 0 }} />
-                {error}
+                {displayError}
               </div>
             )}
 
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -150,17 +160,17 @@ export default function Login() {
                 gap: 8,
                 padding: '11px 0',
                 borderRadius: 8,
-                background: loading ? 'rgba(233,69,96,0.6)' : ACCENT,
+                background: isLoading ? 'rgba(233,69,96,0.6)' : ACCENT,
                 color: '#fff',
                 fontWeight: 600,
                 fontSize: 14,
                 border: 'none',
-                cursor: loading ? 'not-allowed' : 'pointer',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
                 transition: 'opacity 0.15s',
                 marginTop: 4,
               }}
             >
-              {loading
+              {isLoading
                 ? <><Loader size={15} style={{ animation: 'spin 0.8s linear infinite' }} /> Signing in…</>
                 : 'Sign in'}
             </button>

@@ -1,16 +1,24 @@
 import { useState } from 'react';
-import { LifeBuoy, AlertOctagon, Clock, CheckCircle, Bot, ArrowUpCircle } from 'lucide-react';
-import { tickets } from '../data/sampleData';
+import { createPortal } from 'react-dom';
+import { LifeBuoy, AlertOctagon, Clock, CheckCircle, ChevronDown, ArrowUpCircle, Copy, Check } from 'lucide-react';
+import { tickets, POLARIS_ADMIN_USERS } from '../data/sampleData';
 import type { Ticket } from '../types';
 
-const ACCENT = '#e94560';
-const GOLD   = '#c8972b';
-const PURPLE = '#9c27b0';
-const GREEN  = '#4caf50';
-const RED    = '#f44336';
-const SLATE  = '#78909c';
+const ACCENT  = '#e94560';
+const GOLD    = '#c8972b';
+const PURPLE  = '#9c27b0';
+const GREEN   = '#4caf50';
+const RED     = '#f44336';
+const SLATE   = '#78909c';
+const INDIGO  = '#6366f1';
 
-// ─── Meta maps ────────────────────────────────────────────────────────────────
+function formatDate(raw: string): string {
+  const d = new Date(raw.replace(' ', 'T'));
+  return d.toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true,
+  });
+}
 
 const PRIORITY_META: Record<Ticket['priority'], { color: string; bg: string; order: number }> = {
   urgent: { color: RED,    bg: 'rgba(244,67,54,0.12)',   order: 0 },
@@ -20,55 +28,52 @@ const PRIORITY_META: Record<Ticket['priority'], { color: string; bg: string; ord
 };
 
 const STATUS_META: Record<Ticket['status'], { label: string; color: string; bg: string }> = {
-  'open':        { label: 'Open',        color: GOLD,   bg: `${GOLD}20`              },
-  'in-progress': { label: 'In Progress', color: PURPLE, bg: `${PURPLE}18`            },
-  'resolved':    { label: 'Resolved',    color: GREEN,  bg: 'rgba(76,175,80,0.12)'  },
+  'open':        { label: 'Open',        color: GOLD,   bg: `${GOLD}20`               },
+  'in-progress': { label: 'In Progress', color: PURPLE, bg: `${PURPLE}18`             },
+  'resolved':    { label: 'Resolved',    color: GREEN,  bg: 'rgba(76,175,80,0.12)'   },
   'closed':      { label: 'Closed',      color: SLATE,  bg: 'rgba(120,144,156,0.12)' },
 };
 
-function deriveCategory(subject: string): string {
-  const s = subject.toLowerCase();
-  if (s.includes('billing') || s.includes('charge') || s.includes('payment')) return 'Billing';
-  if (s.includes('verif') || s.includes('suspend') || s.includes('appeal') || s.includes('account')) return 'Account';
-  if (s.includes('data') || s.includes('export')) return 'Data & Privacy';
-  return 'Technical';
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function SupportTickets() {
   const [items, setItems] = useState<Ticket[]>(tickets);
-  const [statusFilter,   setStatusFilter]   = useState<Ticket['status'] | 'all'>('all');
-  const [priorityFilter, setPriorityFilter] = useState<Ticket['priority'] | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<Ticket['status'] | 'all'>('all');
+
+  // Per-ticket assignee state — keyed by ticket id, value is admin user id or null
+  const [assignees, setAssignees] = useState<Record<string, string | null>>(
+    () => Object.fromEntries(items.map(t => [t.id, t.assigned_to ?? null])),
+  );
+  const [copiedId,  setCopiedId]  = useState<string | null>(null);
+  const [showWip,   setShowWip]   = useState(false);
+
+  function copyEmail(id: string, email: string) {
+    navigator.clipboard.writeText(email);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  }
 
   const updateStatus = (id: string, status: Ticket['status']) =>
     setItems(prev => prev.map(t => t.id === id ? { ...t, status } : t));
 
-  // Sort by priority then created (newest first within same priority)
   const sorted = [...items].sort((a, b) =>
-    PRIORITY_META[a.priority].order - PRIORITY_META[b.priority].order
+    PRIORITY_META[a.priority].order - PRIORITY_META[b.priority].order,
   );
 
-  const visible = sorted.filter(t => {
-    const matchStatus   = statusFilter   === 'all' || t.status   === statusFilter;
-    const matchPriority = priorityFilter === 'all' || t.priority === priorityFilter;
-    return matchStatus && matchPriority;
-  });
+  const visible = sorted.filter(t =>
+    statusFilter === 'all' || t.status === statusFilter,
+  );
 
-  // KPI counts
   const openCount     = items.filter(t => t.status === 'open').length;
   const inProgCount   = items.filter(t => t.status === 'in-progress').length;
   const resolvedCount = items.filter(t => t.status === 'resolved').length;
   const urgentCount   = items.filter(t => t.priority === 'urgent' && t.status !== 'closed' && t.status !== 'resolved').length;
 
   const kpis: { label: string; value: string | number; color: string; bg: string; icon: React.ElementType }[] = [
-    { label: 'Open',          value: openCount,   color: GOLD,   bg: `${GOLD}20`,              icon: LifeBuoy    },
-    { label: 'In Progress',   value: inProgCount, color: PURPLE, bg: `${PURPLE}18`,            icon: Clock       },
-    { label: 'Resolved',      value: resolvedCount, color: GREEN, bg: 'rgba(76,175,80,0.12)',  icon: CheckCircle },
-    { label: 'Urgent',        value: urgentCount, color: RED,    bg: 'rgba(244,67,54,0.12)',   icon: AlertOctagon },
+    { label: 'Open',        value: openCount,     color: GOLD,   bg: `${GOLD}20`,             icon: LifeBuoy    },
+    { label: 'In Progress', value: inProgCount,   color: PURPLE, bg: `${PURPLE}18`,           icon: Clock       },
+    { label: 'Resolved',    value: resolvedCount, color: GREEN,  bg: 'rgba(76,175,80,0.12)', icon: CheckCircle },
+    { label: 'Urgent',      value: urgentCount,   color: RED,    bg: 'rgba(244,67,54,0.12)', icon: AlertOctagon },
   ];
 
-  // Priority distribution
   const priCounts = {
     urgent: items.filter(t => t.priority === 'urgent').length,
     high:   items.filter(t => t.priority === 'high').length,
@@ -104,7 +109,6 @@ export default function SupportTickets() {
           Priority Breakdown —{' '}
           <span style={{ color: 'var(--text-light)', fontWeight: 400 }}>{items.length} total tickets</span>
         </h3>
-
         <div className="flex h-2.5 rounded-full overflow-hidden gap-px mb-4">
           {(['urgent', 'high', 'medium', 'low'] as const).map(p => (
             <div key={p}
@@ -112,7 +116,6 @@ export default function SupportTickets() {
                  title={`${p}: ${priCounts[p]}`} />
           ))}
         </div>
-
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {(['urgent', 'high', 'medium', 'low'] as const).map(p => (
             <div key={p} className="p-3 rounded-lg flex items-center gap-2.5"
@@ -132,7 +135,6 @@ export default function SupportTickets() {
 
       {/* Filters */}
       <div className="flex gap-4 flex-wrap">
-        {/* Status filter */}
         <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--card)' }}>
           {(['all', 'open', 'in-progress', 'resolved', 'closed'] as const).map(s => {
             const active = statusFilter === s;
@@ -149,140 +151,188 @@ export default function SupportTickets() {
             );
           })}
         </div>
-
-        {/* Priority filter */}
-        <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--card)' }}>
-          {(['all', 'urgent', 'high', 'medium', 'low'] as const).map(p => {
-            const active = priorityFilter === p;
-            const color  = p === 'all' ? ACCENT : PRIORITY_META[p].color;
-            return (
-              <button key={p} onClick={() => setPriorityFilter(p)}
-                className="px-3 py-1.5 rounded-md text-xs font-semibold transition-all capitalize"
-                style={{
-                  background: active ? color : 'transparent',
-                  color:      active ? '#fff' : 'var(--text-secondary)',
-                }}>
-                {p}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {/* Ticket Cards */}
       <div className="space-y-3">
         {visible.map(ticket => {
-          const pm      = PRIORITY_META[ticket.priority];
-          const sm      = STATUS_META[ticket.status];
-          const cat     = deriveCategory(ticket.subject);
-          const isOpen  = ticket.status === 'open';
+          const pm       = PRIORITY_META[ticket.priority];
+          const sm       = STATUS_META[ticket.status];
+          const isOpen   = ticket.status === 'open';
           const isInProg = ticket.status === 'in-progress';
-          const assigned = ticket.assignedBot !== '—';
+          const assigneeId = assignees[ticket.id] ?? null;
+          const assignee   = assigneeId ? POLARIS_ADMIN_USERS.find(a => a.id === assigneeId) : null;
 
           return (
             <div key={ticket.id} className="card overflow-hidden"
                  style={{ borderLeft: `4px solid ${pm.color}` }}>
               <div className="p-5">
-                {/* Header */}
+
+                {/* Header row — ref + badges + timestamp */}
                 <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-mono font-bold"
                           style={{ color: 'var(--text-secondary)' }}>
                       {ticket.id}
                     </span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full capitalize"
-                          style={{ background: pm.bg, color: pm.color }}>
-                      {ticket.priority}
-                    </span>
                     <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                           style={{ background: sm.bg, color: sm.color }}>
                       {sm.label}
                     </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full"
-                          style={{ background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
-                      {cat}
-                    </span>
+                    {ticket.category && (
+                      <span className="text-xs px-2 py-0.5 rounded-full"
+                            style={{ background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                        {ticket.category}
+                      </span>
+                    )}
                   </div>
-                  <span className="text-xs" style={{ color: 'var(--text-light)' }}>
-                    {ticket.created}
+                  <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-light)' }}>
+                    {formatDate(ticket.created)}
                   </span>
                 </div>
 
                 {/* Subject */}
-                <div className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>
+                <div className="text-sm font-semibold mb-3" style={{ color: 'var(--text)' }}>
                   {ticket.subject}
                 </div>
 
-                {/* Meta row */}
+                {/* Message body */}
+                {ticket.message && (
+                  <div className="mb-4 px-3 pt-2.5 pb-3 rounded"
+                       style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                    <div className="text-[10px] font-semibold tracking-[0.12em] uppercase mb-1.5"
+                         style={{ color: 'var(--text-light)' }}>
+                      Message
+                    </div>
+                    <p className="text-[13px] leading-relaxed"
+                       style={{ color: 'var(--text-secondary)' }}>
+                      {ticket.message}
+                    </p>
+                  </div>
+                )}
+
+                {/* Meta row — Submitted by + Assigned to */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div>
-                    <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)' }}>User</div>
-                    <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-                      {ticket.user}
-                    </div>
+                    <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)' }}>Submitted by</div>
+                    <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{ticket.user}</div>
+                    {ticket.contact_email && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-[11px]" style={{ color: 'var(--text-light)' }}>
+                          {ticket.contact_email}
+                        </span>
+                        <button
+                          onClick={() => copyEmail(ticket.id, ticket.contact_email!)}
+                          title="Copy email"
+                          className="flex items-center justify-center transition-colors"
+                          style={{ color: copiedId === ticket.id ? GREEN : 'var(--text-light)', lineHeight: 1 }}
+                        >
+                          {copiedId === ticket.id ? <Check size={11} /> : <Copy size={11} />}
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div>
-                    <div className="text-xs mb-0.5" style={{ color: 'var(--text-light)' }}>Assigned to</div>
-                    <div className="flex items-center gap-1.5">
-                      {assigned ? (
-                        <>
-                          <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                               style={{ background: `${ACCENT}20` }}>
-                            <Bot size={11} style={{ color: ACCENT }} />
-                          </div>
-                          <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
-                            {ticket.assignedBot}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-sm" style={{ color: 'var(--text-light)' }}>Unassigned</span>
-                      )}
+                    <div className="text-xs mb-1" style={{ color: 'var(--text-light)' }}>Assigned to</div>
+                    <div className="relative">
+                      <select
+                        value={assigneeId ?? ''}
+                        onChange={(e) =>
+                          setAssignees(prev => ({ ...prev, [ticket.id]: e.target.value || null }))
+                        }
+                        className="w-full appearance-none text-[13px] px-2.5 pr-7 py-1.5 rounded-md"
+                        style={{
+                          background: 'var(--bg)',
+                          border:     '1px solid var(--border)',
+                          color:      assignee ? 'var(--text)' : 'var(--text-secondary)',
+                          outline:    'none',
+                          cursor:     'pointer',
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {POLARIS_ADMIN_USERS.map(a => (
+                          <option key={a.id} value={a.id}>{a.full_name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        size={11}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
+                        style={{ color: 'var(--text-light)' }}
+                      />
                     </div>
                   </div>
                 </div>
 
-                {/* Actions */}
+                {/* Action buttons */}
                 {(isOpen || isInProg) && (
                   <div className="flex gap-2 pt-3 flex-wrap"
                        style={{ borderTop: '1px solid var(--border)' }}>
                     {isOpen && (
-                      <button onClick={() => updateStatus(ticket.id, 'in-progress')}
-                        className="px-3 py-1.5 rounded-md text-xs font-semibold"
-                        style={{ background: `${PURPLE}18`, color: PURPLE }}>
+                      <button onClick={() => setShowWip(true)}
+                        className="px-3 py-1.5 rounded text-xs font-semibold"
+                        style={{ background: PURPLE, color: '#fff' }}>
                         Start
                       </button>
                     )}
                     {isInProg && (
-                      <button onClick={() => updateStatus(ticket.id, 'resolved')}
-                        className="px-3 py-1.5 rounded-md text-xs font-semibold"
-                        style={{ background: 'rgba(76,175,80,0.12)', color: GREEN }}>
+                      <button onClick={() => setShowWip(true)}
+                        className="px-3 py-1.5 rounded text-xs font-semibold"
+                        style={{ background: GREEN, color: '#fff' }}>
                         Resolve
                       </button>
                     )}
                     {isInProg && (
-                      <button onClick={() => updateStatus(ticket.id, 'open')}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold"
-                        style={{ background: `${GOLD}20`, color: GOLD }}>
+                      <button onClick={() => setShowWip(true)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold"
+                        style={{ background: GOLD, color: '#fff' }}>
                         <ArrowUpCircle size={11} /> Escalate
                       </button>
                     )}
-                    <button onClick={() => updateStatus(ticket.id, 'closed')}
-                      className="px-3 py-1.5 rounded-md text-xs font-semibold"
-                      style={{ background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                    <button onClick={() => setShowWip(true)}
+                      className="px-3 py-1.5 rounded text-xs font-semibold"
+                      style={{ background: SLATE, color: '#fff' }}>
                       Close
                     </button>
                   </div>
                 )}
+
               </div>
             </div>
           );
         })}
+
         {visible.length === 0 && (
           <div className="card p-12 text-center" style={{ color: 'var(--text-light)' }}>
             No tickets match the current filters
           </div>
         )}
       </div>
+
+      {/* WIP modal */}
+      {showWip && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.55)' }}
+          onClick={() => setShowWip(false)}>
+          <div
+            className="card p-8 flex flex-col items-center gap-3 rounded-2xl"
+            style={{ maxWidth: 340, width: '90%', boxShadow: '0 24px 48px rgba(0,0,0,0.4)' }}
+            onClick={e => e.stopPropagation()}>
+            <span style={{ fontSize: 48, lineHeight: 1 }}>🚧</span>
+            <h3 className="text-base font-bold" style={{ color: 'var(--text)' }}>Work in Progress</h3>
+            <p className="text-sm text-center" style={{ color: 'var(--text-light)' }}>
+              This feature is under active development.
+            </p>
+            <button
+              onClick={() => setShowWip(false)}
+              className="mt-2 px-5 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
+              style={{ background: INDIGO }}>
+              Got it
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )}
 
     </div>
   );
