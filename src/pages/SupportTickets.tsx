@@ -40,6 +40,9 @@ export default function SupportTickets() {
   const [error,        setError]        = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<SupportTicket['status'] | 'all'>('all');
   const [assignees,    setAssignees]    = useState<Record<string, string | null>>({});
+  const [assessmentDrafts, setAssessmentDrafts] = useState<Record<string, string>>({});
+  const [savingNotes,      setSavingNotes]      = useState<Record<string, boolean>>({});
+  const [noteErrors,       setNoteErrors]       = useState<Record<string, string | null>>({});
   const [copiedId,     setCopiedId]     = useState<string | null>(null);
   const [showWip,      setShowWip]      = useState(false);
 
@@ -48,6 +51,7 @@ export default function SupportTickets() {
       .then(({ data }) => {
         setItems(data);
         setAssignees(Object.fromEntries(data.map(t => [t.id, t.assigned_to])));
+        setAssessmentDrafts(Object.fromEntries(data.map(t => [t.id, t.assessment_note ?? ''])));
       })
       .catch(err => setError(err instanceof Error ? err.message : 'Failed to load tickets'))
       .finally(() => setLoading(false));
@@ -57,6 +61,29 @@ export default function SupportTickets() {
     navigator.clipboard.writeText(email);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  async function saveAssessmentNote(ticketId: string) {
+    const draft = assessmentDrafts[ticketId] ?? '';
+
+    setSavingNotes(prev => ({ ...prev, [ticketId]: true }));
+    setNoteErrors(prev => ({ ...prev, [ticketId]: null }));
+
+    try {
+      const { data } = await api.support.update(ticketId, {
+        assessment_note: draft.trim() || null,
+      });
+
+      setItems(prev => prev.map(ticket => ticket.id === ticketId ? data : ticket));
+      setAssessmentDrafts(prev => ({ ...prev, [ticketId]: data.assessment_note ?? '' }));
+    } catch (err) {
+      setNoteErrors(prev => ({
+        ...prev,
+        [ticketId]: err instanceof Error ? err.message : 'Failed to save assessment note',
+      }));
+    } finally {
+      setSavingNotes(prev => ({ ...prev, [ticketId]: false }));
+    }
   }
 
   const sorted = [...items].sort((a, b) =>
@@ -147,6 +174,11 @@ export default function SupportTickets() {
           const isInProg = ticket.status === 'in-progress';
           const assigneeId = assignees[ticket.id] ?? null;
           const assignee   = assigneeId ? POLARIS_ADMIN_USERS.find(a => a.id === assigneeId) : null;
+          const assessmentDraft = assessmentDrafts[ticket.id] ?? '';
+          const savedAssessment  = ticket.assessment_note ?? '';
+          const isSavingNote     = savingNotes[ticket.id] ?? false;
+          const noteError        = noteErrors[ticket.id] ?? null;
+          const noteIsDirty      = assessmentDraft !== savedAssessment;
 
           return (
             <div key={ticket.id} className="card overflow-hidden"
@@ -177,9 +209,9 @@ export default function SupportTickets() {
                 </div>
 
 
-                {/* Message body */}
-                {ticket.message && (
-                  <div className="mb-4 px-3 pt-2.5 pb-3 rounded"
+                {/* Message + assessment note */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+                  <div className="px-3 pt-2.5 pb-3 rounded"
                        style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
                     <div className="text-[10px] font-semibold tracking-[0.12em] uppercase mb-1.5"
                          style={{ color: 'var(--text-light)' }}>
@@ -187,10 +219,55 @@ export default function SupportTickets() {
                     </div>
                     <p className="text-[13px] leading-relaxed"
                        style={{ color: 'var(--text-secondary)' }}>
-                      {ticket.message}
+                      {ticket.message ?? '—'}
                     </p>
                   </div>
-                )}
+
+                  <div className="px-3 pt-2.5 pb-3 rounded"
+                       style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="text-[10px] font-semibold tracking-[0.12em] uppercase"
+                           style={{ color: 'var(--text-light)' }}>
+                        Assessment Note
+                      </div>
+                      <button
+                        onClick={() => saveAssessmentNote(ticket.id)}
+                        disabled={isSavingNote || !noteIsDirty}
+                        className="flex-shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition-all"
+                        style={{
+                          background: isSavingNote || !noteIsDirty ? 'var(--border)' : INDIGO,
+                          color: isSavingNote || !noteIsDirty ? 'var(--text-light)' : '#fff',
+                          cursor: isSavingNote || !noteIsDirty ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {isSavingNote ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                    <textarea
+                      value={assessmentDraft}
+                      onChange={(event) => {
+                        setAssessmentDrafts(prev => ({ ...prev, [ticket.id]: event.target.value }));
+                        if (noteError) {
+                          setNoteErrors(prev => ({ ...prev, [ticket.id]: null }));
+                        }
+                      }}
+                      placeholder="Add an internal assessment note…"
+                      rows={3}
+                      className="w-full resize-y rounded-md px-2.5 py-2 text-[13px] leading-relaxed"
+                      style={{
+                        background: 'var(--card)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--text)',
+                        outline: 'none',
+                      }}
+                    />
+                    {noteError && (
+                      <div className="mt-1.5 text-[11px]" style={{ color: RED }}>
+                        {noteError}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Meta row — Submitted by + Assigned to */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
