@@ -26,12 +26,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Tracks whether the initial session check has completed so onAuthStateChange
   // can tell new sign-ins apart from the startup INITIAL_SESSION event.
   const initialLoadDone = useRef(false)
+  const verifiedUserId = useRef<string | null>(null)
 
-  async function loadAdminUser(_s: Session) {
+  async function loadAdminUser(s: Session) {
     try {
       const res = await api.me()
       setAdminUser(res.data)
       setAdminError(null)
+      verifiedUserId.current = s.user.id
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''
       if (msg.includes('not an admin') || msg.includes('403')) {
@@ -39,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.auth.signOut()
         setSession(null)
         setAdminUser(null)
+        verifiedUserId.current = null
       }
       // Network/server errors leave the session intact so a transient failure
       // doesn't log out a legitimate admin.
@@ -57,14 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setLoading(false)
         initialLoadDone.current = true
+        verifiedUserId.current = null
       }
     })
 
     // Listens for sign-in / sign-out events that happen after the initial load.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s)
       if (s) {
-        if (initialLoadDone.current) {
+        if (
+          event === 'SIGNED_IN'
+          && initialLoadDone.current
+          && verifiedUserId.current !== s.user.id
+        ) {
           // New sign-in — show verifying spinner, check admin status.
           setVerifying(true)
           loadAdminUser(s).finally(() => setVerifying(false))
@@ -73,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setAdminUser(null)
         setVerifying(false)
+        verifiedUserId.current = null
       }
     })
 
@@ -94,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null)
     setAdminUser(null)
     setAdminError(null)
+    verifiedUserId.current = null
   }
 
   async function updateAvatar(seed: string | null) {
