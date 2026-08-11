@@ -9,7 +9,7 @@ import DonutChart from '../components/charts/DonutChart';
 import RevenueChart from '../components/charts/RevenueChart';
 import { overviewStats, planDistribution, revenueTrendData } from '../data/sampleData';
 import { api } from '../lib/api';
-import type { SubEvent, SubEventType, SubscriberStats, ActiveUsersStats } from '../lib/api';
+import type { SubEvent, SubEventType, SubscriberStats, ActiveUsersStats, AcquisitionKPIs } from '../lib/api';
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
@@ -51,7 +51,8 @@ export default function Overview() {
   const [subscribers,     setSubs]       = useState<SubscriberStats | null>(null);
   const [activeUsers,     setActiveU]    = useState<ActiveUsersStats | null>(null);
   const [flagged,         setFlagged]    = useState<{ system: number; user_reported: number; total: number } | null>(null);
-  const [openTickets,     setOpenTickets] = useState<number | null>(null);
+  const [openTickets,     setOpenTickets]  = useState<number | null>(null);
+  const [acqKPIs,         setAcqKPIs]      = useState<AcquisitionKPIs | null>(null);
 
   useEffect(() => {
     api.finance.subscriptionEvents()
@@ -64,6 +65,8 @@ export default function Overview() {
       .then(setFlagged).catch(() => {});
     api.support.openCount()
       .then(r => setOpenTickets(r.count)).catch(() => {});
+    api.analytics.acquisitionKPIs()
+      .then(setAcqKPIs).catch(() => {});
   }, []);
 
   return (
@@ -173,8 +176,8 @@ export default function Overview() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="New Registrations"
-          value={overviewStats.newRegistrations}
-          change={overviewStats.registrationGrowth}
+          value={acqKPIs ? acqKPIs.new_users_month : '—'}
+          change={acqKPIs ? Math.round(acqKPIs.mom_growth_rate) : undefined}
           icon={<UserPlus size={18} />}
           iconBg="#2196f3"
         />
