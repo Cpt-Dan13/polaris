@@ -9,7 +9,7 @@ import DonutChart from '../components/charts/DonutChart';
 import RevenueChart from '../components/charts/RevenueChart';
 import { overviewStats, planDistribution, revenueTrendData } from '../data/sampleData';
 import { api } from '../lib/api';
-import type { SubEvent, SubEventType } from '../lib/api';
+import type { SubEvent, SubEventType, SubscriberStats, ActiveUsersStats } from '../lib/api';
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
@@ -46,12 +46,18 @@ function timeAgo(iso: string): string {
 }
 
 export default function Overview() {
-  const [events,       setEvents]   = useState<SubEvent[]>([]);
-  const [eventsLoading, setEventsL] = useState(true);
+  const [events,        setEvents]   = useState<SubEvent[]>([]);
+  const [eventsLoading, setEventsL]  = useState(true);
+  const [subscribers,   setSubs]     = useState<SubscriberStats | null>(null);
+  const [activeUsers,   setActiveU]  = useState<ActiveUsersStats | null>(null);
 
   useEffect(() => {
     api.finance.subscriptionEvents()
       .then(setEvents).catch(() => {}).finally(() => setEventsL(false));
+    api.analytics.subscribers()
+      .then(setSubs).catch(() => {});
+    api.analytics.activeUsers()
+      .then(setActiveU).catch(() => {});
   }, []);
 
   return (
@@ -69,7 +75,7 @@ export default function Overview() {
         />
 
         {/* Combined Subscribers card */}
-        <div className="card p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+        <div className="card p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between">
             <div className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
               Subscribers
@@ -79,45 +85,61 @@ export default function Overview() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Star size={14} style={{ color: '#e94560' }} />
-              <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Nova</span>
-            </div>
-            <div className="text-right">
-              <div className="text-xl font-bold" style={{ color: 'var(--text)' }}>
-                {overviewStats.novaSubscribers.toLocaleString()}
-              </div>
-              <div className="flex items-center justify-end gap-1 text-xs font-medium" style={{ color: '#4caf50' }}>
-                <TrendingUp size={11} />
-                +{overviewStats.novaGrowth}%
-              </div>
-            </div>
-          </div>
-
-          <div style={{ borderTop: '1px solid var(--border)' }} />
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Zap size={14} style={{ color: '#c8972b' }} />
-              <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>SuperNova</span>
-            </div>
-            <div className="text-right">
-              <div className="text-xl font-bold" style={{ color: 'var(--text)' }}>
-                {overviewStats.supernovaSubscribers.toLocaleString()}
-              </div>
-              <div className="flex items-center justify-end gap-1 text-xs font-medium" style={{ color: '#4caf50' }}>
-                <TrendingUp size={11} />
-                +{overviewStats.supernovaGrowth}%
-              </div>
-            </div>
-          </div>
+          {/* Table */}
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr>
+                <th className="text-left pb-2 text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-light)' }}>Tier</th>
+                <th className="text-right pb-2 text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-light)' }}>Patriarch</th>
+                <th className="text-right pb-2 text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-light)' }}>Muse</th>
+                <th className="text-right pb-2 text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-light)' }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderTop: '1px solid var(--border)' }}>
+                <td className="py-3">
+                  <div className="flex items-center gap-1.5">
+                    <Star size={12} style={{ color: '#e94560' }} />
+                    <span className="font-medium" style={{ color: 'var(--text)' }}>Nova</span>
+                  </div>
+                </td>
+                <td className="py-3 text-right font-semibold tabular-nums" style={{ color: 'var(--text)' }}>
+                  {subscribers ? subscribers.nova.patriarch.toLocaleString() : '—'}
+                </td>
+                <td className="py-3 text-right font-semibold tabular-nums" style={{ color: 'var(--text)' }}>
+                  {subscribers ? subscribers.nova.muse.toLocaleString() : '—'}
+                </td>
+                <td className="py-3 text-right font-bold tabular-nums" style={{ color: '#e94560' }}>
+                  {subscribers ? subscribers.nova.total.toLocaleString() : '—'}
+                </td>
+              </tr>
+              <tr style={{ borderTop: '1px solid var(--border)' }}>
+                <td className="py-3">
+                  <div className="flex items-center gap-1.5">
+                    <Zap size={12} style={{ color: '#c8972b' }} />
+                    <span className="font-medium" style={{ color: 'var(--text)' }}>Supernova</span>
+                  </div>
+                </td>
+                <td className="py-3 text-right font-semibold tabular-nums" style={{ color: 'var(--text)' }}>
+                  {subscribers ? subscribers.supernova.patriarch.toLocaleString() : '—'}
+                </td>
+                <td className="py-3 text-right font-semibold tabular-nums" style={{ color: 'var(--text)' }}>
+                  {subscribers ? subscribers.supernova.muse.toLocaleString() : '—'}
+                </td>
+                <td className="py-3 text-right font-bold tabular-nums" style={{ color: '#c8972b' }}>
+                  {subscribers ? subscribers.supernova.total.toLocaleString() : '—'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <StatCard
           label="Active Users Today"
-          value={overviewStats.activeUsers}
-          change={overviewStats.userGrowth}
+          value={activeUsers ? activeUsers.dau : '—'}
+          change={activeUsers && activeUsers.dau_last_week > 0
+            ? Math.round((activeUsers.dau - activeUsers.dau_last_week) / activeUsers.dau_last_week * 100)
+            : undefined}
           icon={<Users size={18} />}
           iconBg="#4caf50"
         />

@@ -37,8 +37,9 @@ export const api = {
     engagement:        () => request('/analytics/engagement'),
     matchFunnel:       () => request('/analytics/match-funnel'),
     growth:            (days = 30) => request(`/analytics/growth?days=${days}`),
-    activeUsers:       () => request('/analytics/active-users'),
+    activeUsers:       () => request<ActiveUsersStats>('/analytics/active-users'),
     genderSplit:       () => request('/analytics/gender-split'),
+    subscribers:       () => request<SubscriberStats>('/analytics/subscribers'),
     subscriptionSplit: () => request('/analytics/subscription-split'),
     swipes:            (period: 'week' | 'month' | 'year' = 'week') =>
       request<SwipeAnalyticsData>(`/analytics/swipes?period=${period}`),
@@ -191,6 +192,14 @@ export interface SupportTicket {
   created_at:       string
   updated_at:       string
 }
+
+export interface SubscriberTierStats { total: number; patriarch: number; muse: number }
+export interface SubscriberStats {
+  nova:      SubscriberTierStats
+  supernova: SubscriberTierStats
+}
+
+export interface ActiveUsersStats { dau: number; dau_last_week: number; wau: number; mau: number }
 
 export interface DistBucket { label: string; pct: number }
 
