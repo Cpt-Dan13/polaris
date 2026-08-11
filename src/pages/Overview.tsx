@@ -223,11 +223,11 @@ export default function Overview() {
         </div>
       </div>
 
-      {/* Row 4 — Recent Activity + Bot Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Row 4 — Recent Activity */}
+      <div className="grid grid-cols-1 gap-4">
 
         {/* Recent Activity — live Nova / Supernova events */}
-        <div className="card p-5 lg:col-span-2">
+        <div className="card p-5">
           <div className="flex items-center gap-2 mb-4">
             <Activity size={15} style={{ color: ACCENT }} />
             <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Recent Activity</h2>
@@ -303,34 +303,6 @@ export default function Overview() {
               </div>
             );
           })()}
-        </div>
-
-        <div className="card p-5">
-          <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>Bot Status</h2>
-          <div className="space-y-3">
-            {[
-              { name: 'Isla Seraphin',    vm: 'VM-03', status: 'active',   msgs: 3842 },
-              { name: 'Elena Rossi',      vm: 'VM-01', status: 'active',   msgs: 5217 },
-              { name: 'Lyra Belrose',     vm: 'VM-02', status: 'active',   msgs: 2904 },
-              { name: 'Aurora Solstice',  vm: 'VM-01', status: 'active',   msgs: 4130 },
-              { name: 'Seraphina Lux',    vm: 'VM-04', status: 'inactive', msgs: 1720 },
-              { name: 'Maeve Calloway',   vm: 'VM-04', status: 'inactive', msgs: 980  },
-            ].map(bot => (
-              <div key={bot.name} className="flex items-center gap-3">
-                <div
-                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ background: bot.status === 'active' ? GREEN : '#6b7280' }}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium truncate" style={{ color: 'var(--text)' }}>{bot.name}</div>
-                  <div className="text-xs" style={{ color: 'var(--text-light)' }}>{bot.vm}</div>
-                </div>
-                <div className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                  {bot.msgs.toLocaleString()}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
       </div>
