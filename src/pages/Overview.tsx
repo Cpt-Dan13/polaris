@@ -46,10 +46,12 @@ function timeAgo(iso: string): string {
 }
 
 export default function Overview() {
-  const [events,        setEvents]   = useState<SubEvent[]>([]);
-  const [eventsLoading, setEventsL]  = useState(true);
-  const [subscribers,   setSubs]     = useState<SubscriberStats | null>(null);
-  const [activeUsers,   setActiveU]  = useState<ActiveUsersStats | null>(null);
+  const [events,          setEvents]     = useState<SubEvent[]>([]);
+  const [eventsLoading,   setEventsL]    = useState(true);
+  const [subscribers,     setSubs]       = useState<SubscriberStats | null>(null);
+  const [activeUsers,     setActiveU]    = useState<ActiveUsersStats | null>(null);
+  const [flagged,         setFlagged]    = useState<{ system: number; user_reported: number; total: number } | null>(null);
+  const [openTickets,     setOpenTickets] = useState<number | null>(null);
 
   useEffect(() => {
     api.finance.subscriptionEvents()
@@ -58,12 +60,16 @@ export default function Overview() {
       .then(setSubs).catch(() => {});
     api.analytics.activeUsers()
       .then(setActiveU).catch(() => {});
+    api.moderation.flaggedMessagesCount()
+      .then(setFlagged).catch(() => {});
+    api.support.openCount()
+      .then(r => setOpenTickets(r.count)).catch(() => {});
   }, []);
 
   return (
     <div className="space-y-6">
 
-      {/* Row 1 — Revenue, Subscriptions, Active Users */}
+      {/* Row 1 — Revenue, Subscriptions, Flagged Messages */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <StatCard
           label="Revenue (MTD)"
@@ -134,15 +140,33 @@ export default function Overview() {
           </table>
         </div>
 
-        <StatCard
-          label="Active Users Today"
-          value={activeUsers ? activeUsers.dau : '—'}
-          change={activeUsers && activeUsers.dau_last_week > 0
-            ? Math.round((activeUsers.dau - activeUsers.dau_last_week) / activeUsers.dau_last_week * 100)
-            : undefined}
-          icon={<Users size={18} />}
-          iconBg="#4caf50"
-        />
+        {/* Flagged Messages — system detected + user reported */}
+        <div className="card p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              Flagged Messages
+            </div>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,152,0,0.2)' }}>
+              <AlertTriangle size={18} style={{ color: '#ff9800' }} />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>System Detected</span>
+            <span className="text-xl font-bold tabular-nums" style={{ color: 'var(--text)' }}>
+              {flagged !== null ? flagged.system.toLocaleString() : '—'}
+            </span>
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--border)' }} />
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>User Reported</span>
+            <span className="text-xl font-bold tabular-nums" style={{ color: 'var(--text)' }}>
+              {flagged !== null ? flagged.user_reported.toLocaleString() : '—'}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Row 2 — Growth & Moderation */}
@@ -162,14 +186,17 @@ export default function Overview() {
           iconBg="#e94560"
         />
         <StatCard
-          label="Flagged Messages"
-          value={overviewStats.flaggedMessages}
-          icon={<AlertTriangle size={18} />}
-          iconBg="#ff9800"
+          label="Active Users Today"
+          value={activeUsers ? activeUsers.dau : '—'}
+          change={activeUsers && activeUsers.dau_last_week > 0
+            ? Math.round((activeUsers.dau - activeUsers.dau_last_week) / activeUsers.dau_last_week * 100)
+            : undefined}
+          icon={<Users size={18} />}
+          iconBg="#4caf50"
         />
         <StatCard
-          label="Open Reports"
-          value={overviewStats.openReports}
+          label="Open Tickets"
+          value={openTickets !== null ? openTickets : '—'}
           icon={<Flag size={18} />}
           iconBg="#f44336"
         />

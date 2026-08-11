@@ -75,7 +75,8 @@ export const api = {
         method: 'POST',
         body:   JSON.stringify({ action, notes }),
       }),
-    flaggedMessages: (limit = 50) => request(`/moderation/flagged-messages?limit=${limit}`),
+    flaggedMessages:      (limit = 50) => request(`/moderation/flagged-messages?limit=${limit}`),
+    flaggedMessagesCount: () => request<{ system: number; user_reported: number; total: number }>('/moderation/flagged-messages/count'),
     blocks:          (limit = 50) => request(`/moderation/blocks?limit=${limit}`),
     userSanctions:   (userId: string) => request(`/moderation/users/${userId}/sanctions`),
     warn:            (userId: string, reason: string) =>
@@ -155,6 +156,7 @@ export const api = {
         method: 'PATCH',
         body:   JSON.stringify(patch),
       }),
+    openCount: () => request<{ count: number }>('/support/count'),
   },
 
   email: {
