@@ -72,6 +72,7 @@ const pageTitles: Record<string, string> = {
   'active-users':      'Active Users',
   'subscriptions':     'Subscriptions',
   'revenue':           'Revenue',
+  'cancellations':     'Cancellations',
   'chat-assessment':   'Chat Assessment',
   'report-evaluation': 'Report Evaluation',
   'customer-service':  'Customer Service',

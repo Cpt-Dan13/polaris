@@ -21,6 +21,7 @@ import ProfileInsights from './pages/ProfileInsights';
 import Growth from './pages/Growth';
 import Subscriptions from './pages/Subscriptions';
 import Revenue from './pages/Revenue';
+import Cancellations from './pages/Cancellations';
 import ChatAssessment from './pages/ChatAssessment';
 import ReportEvaluation from './pages/ReportEvaluation';
 import SupportTickets from './pages/SupportTickets';
@@ -37,6 +38,7 @@ function PageRenderer({ page }: { page: Page }) {
     // Finance
     case 'subscriptions':       return <Subscriptions />;
     case 'revenue':             return <Revenue />;
+    case 'cancellations':       return <Cancellations />;
     // Moderation
     case 'chat-assessment':     return <ChatAssessment />;
     case 'report-evaluation':   return <ReportEvaluation />;

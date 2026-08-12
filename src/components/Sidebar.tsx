@@ -2,7 +2,7 @@
   LayoutDashboard, UserPlus, Activity,
   Users, Headphones, Star, Megaphone, Sparkles,
   ChevronRight, BarChart2, PieChart, TrendingDown,
-  TrendingUp, CreditCard, DollarSign, ShieldAlert, ClipboardList, LifeBuoy,
+  TrendingUp, CreditCard, DollarSign, ShieldAlert, ClipboardList, LifeBuoy, XCircle,
 } from 'lucide-react';
 import type { Page } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +25,7 @@ const navItems: NavItem[] = [
 
   { id: 'subscriptions',       label: 'Subscriptions',       icon: CreditCard,      group: 'Finance' },
   { id: 'revenue',             label: 'Revenue',             icon: DollarSign,      group: 'Finance' },
+  { id: 'cancellations',       label: 'Cancellations',       icon: XCircle,         group: 'Finance' },
 
   { id: 'chat-assessment',     label: 'Chat Assessment',     icon: ShieldAlert,     group: 'Moderation' },
   { id: 'report-evaluation',   label: 'Report Evaluation',   icon: ClipboardList,   group: 'Moderation' },

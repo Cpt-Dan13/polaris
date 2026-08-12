@@ -8,6 +8,7 @@ export type Page =
   // Finance
   | 'subscriptions'
   | 'revenue'
+  | 'cancellations'
   // Moderation
   | 'chat-assessment'
   | 'report-evaluation'
