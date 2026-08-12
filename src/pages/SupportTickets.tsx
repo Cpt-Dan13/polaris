@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { LifeBuoy, AlertOctagon, Clock, CheckCircle, ChevronDown, ChevronUp, ArrowUpCircle, Copy, Check } from 'lucide-react';
+import { LifeBuoy, AlertOctagon, Clock, CheckCircle, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
 import { api, type SupportTicket, type SupportAssignee } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { canAct } from '../lib/rbac';
@@ -22,12 +22,7 @@ function formatDate(raw: string): string {
   });
 }
 
-const PRIORITY_META: Record<SupportTicket['priority'], { color: string; bg: string; order: number }> = {
-  urgent: { color: RED,    bg: 'rgba(244,67,54,0.12)',   order: 0 },
-  high:   { color: ACCENT, bg: `${ACCENT}18`,             order: 1 },
-  medium: { color: GOLD,   bg: `${GOLD}20`,              order: 2 },
-  low:    { color: GREEN,  bg: 'rgba(76,175,80,0.12)',   order: 3 },
-};
+const URGENT_META = { color: RED, bg: 'rgba(244,67,54,0.12)' };
 
 const STATUS_META: Record<SupportTicket['status'], { label: string; color: string; bg: string }> = {
   'open':        { label: 'Open',        color: GOLD,   bg: `${GOLD}20`               },
@@ -42,7 +37,7 @@ export default function SupportTickets() {
   const [assigneeList, setAssigneeList] = useState<SupportAssignee[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<SupportTicket['status'] | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<SupportTicket['status'] | 'all' | 'urgent'>('all');
   const [assignees,    setAssignees]    = useState<Record<string, string | null>>({});
   const [assessmentDrafts, setAssessmentDrafts] = useState<Record<string, string>>({});
   const [savingNotes,      setSavingNotes]      = useState<Record<string, boolean>>({});
@@ -69,7 +64,7 @@ export default function SupportTickets() {
     });
   }
 
-  async function handleAction(id: string, patch: { status?: string; priority?: string }) {
+  async function handleAction(id: string, patch: { status?: string; is_urgent?: boolean }) {
     setActioning(id);
     try {
       const { data } = await api.support.update(id, patch);
@@ -127,17 +122,20 @@ export default function SupportTickets() {
   }
 
   const sorted = [...items].sort((a, b) =>
-    PRIORITY_META[a.priority].order - PRIORITY_META[b.priority].order,
+    Number(b.is_urgent) - Number(a.is_urgent) ||
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
 
   const visible = sorted.filter(t =>
-    statusFilter === 'all' || t.status === statusFilter,
+    statusFilter === 'all'    ? true :
+    statusFilter === 'urgent' ? t.is_urgent :
+    t.status === statusFilter,
   );
 
   const openCount   = items.filter(t => t.status === 'open').length;
   const inProgCount = items.filter(t => t.status === 'in-progress').length;
   const closedCount = items.filter(t => t.status === 'closed').length;
-  const urgentCount = items.filter(t => t.priority === 'urgent' && t.status !== 'closed').length;
+  const urgentCount = items.filter(t => t.is_urgent && t.status !== 'closed').length;
 
   const kpis: { label: string; value: string | number; color: string; bg: string; icon: React.ElementType }[] = [
     { label: 'Open',        value: openCount,   color: GOLD,   bg: `${GOLD}20`,             icon: LifeBuoy    },
@@ -188,17 +186,22 @@ export default function SupportTickets() {
       {/* Filters */}
       <div className="flex gap-4 flex-wrap">
         <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--card)' }}>
-          {(['all', 'open', 'in-progress', 'closed'] as const).map(s => {
+          {(['all', 'open', 'in-progress', 'closed', 'urgent'] as const).map(s => {
             const active = statusFilter === s;
-            const meta   = s !== 'all' ? STATUS_META[s] : null;
+            const color  = s === 'urgent'       ? URGENT_META.color
+                         : s !== 'all'          ? STATUS_META[s as SupportTicket['status']].color
+                         : ACCENT;
+            const label  = s === 'in-progress'  ? 'In Progress'
+                         : s === 'urgent'        ? 'Urgent'
+                         : s.charAt(0).toUpperCase() + s.slice(1);
             return (
               <button key={s} onClick={() => setStatusFilter(s)}
-                className="px-3 py-1.5 rounded-md text-xs font-semibold transition-all capitalize"
+                className="px-3 py-1.5 rounded-md text-xs font-semibold transition-all"
                 style={{
-                  background: active ? (meta?.color ?? ACCENT) : 'transparent',
+                  background: active ? color : 'transparent',
                   color:      active ? '#fff' : 'var(--text-secondary)',
                 }}>
-                {s === 'in-progress' ? 'In Progress' : s}
+                {label}
               </button>
             );
           })}
@@ -208,7 +211,6 @@ export default function SupportTickets() {
       {/* Ticket Cards */}
       <div className="space-y-3">
         {visible.map(ticket => {
-          const pm         = PRIORITY_META[ticket.priority];
           const sm         = STATUS_META[ticket.status];
           const isOpen     = ticket.status === 'open';
           const isInProg   = ticket.status === 'in-progress';
@@ -384,15 +386,16 @@ export default function SupportTickets() {
                             Start Review
                           </button>
                         )}
-                        {isInProg && ticket.priority !== 'urgent' && (
-                          <button
-                            disabled={isActioning}
-                            onClick={() => guardedAction(() => handleAction(ticket.id, { priority: 'urgent' }))}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
-                            style={{ background: GOLD, color: '#fff' }}>
-                            <ArrowUpCircle size={11} /> Escalate
-                          </button>
-                        )}
+                        <button
+                          disabled={isActioning}
+                          onClick={() => guardedAction(() => handleAction(ticket.id, { is_urgent: !ticket.is_urgent }))}
+                          className="px-3 py-1.5 rounded text-xs font-semibold transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
+                          style={{
+                            background: RED,
+                            color:      '#fff',
+                          }}>
+                          {ticket.is_urgent ? 'Urgent ✕' : 'Mark Urgent'}
+                        </button>
                         <button
                           disabled={isActioning}
                           onClick={() => guardedAction(() => handleAction(ticket.id, { status: 'closed' }))}

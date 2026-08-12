@@ -152,7 +152,7 @@ export const api = {
       )}` : ''
       return request<{ data: SupportTicket[]; count: number }>(`/support${q}`)
     },
-    update: (id: string, patch: { status?: string; priority?: string; assigned_to?: string | null; assessment_note?: string | null }) =>
+    update: (id: string, patch: { status?: string; is_urgent?: boolean; assigned_to?: string | null; assessment_note?: string | null }) =>
       request<{ data: SupportTicket }>(`/support/${id}`, {
         method: 'PATCH',
         body:   JSON.stringify(patch),
@@ -197,7 +197,7 @@ export interface SupportTicket {
   message:          string | null
   assessment_note:  string | null
   status:           'open' | 'in-progress' | 'closed'
-  priority:         'low' | 'medium' | 'high' | 'urgent'
+  is_urgent:        boolean
   assigned_to:      string | null
   created_at:       string
   updated_at:       string
