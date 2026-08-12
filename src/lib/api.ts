@@ -157,7 +157,8 @@ export const api = {
         method: 'PATCH',
         body:   JSON.stringify(patch),
       }),
-    openCount: () => request<{ count: number }>('/support/count'),
+    openCount:  () => request<{ count: number }>('/support/count'),
+    assignees:  () => request<{ data: SupportAssignee[] }>('/support/assignees'),
   },
 
   email: {
@@ -180,6 +181,12 @@ export const api = {
   },
 }
 
+export interface SupportAssignee {
+  id:        string
+  full_name: string | null
+  email:     string
+}
+
 export interface SupportTicket {
   id:               string
   ref:              string
@@ -189,7 +196,7 @@ export interface SupportTicket {
   category:         string | null
   message:          string | null
   assessment_note:  string | null
-  status:           'open' | 'in-progress' | 'resolved' | 'closed'
+  status:           'open' | 'in-progress' | 'closed'
   priority:         'low' | 'medium' | 'high' | 'urgent'
   assigned_to:      string | null
   created_at:       string

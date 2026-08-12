@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LifeBuoy, AlertOctagon, Clock, CheckCircle, ChevronDown, ChevronUp, ArrowUpCircle, Copy, Check } from 'lucide-react';
-import { POLARIS_ADMIN_USERS } from '../data/sampleData';
-import { api, type SupportTicket } from '../lib/api';
+import { api, type SupportTicket, type SupportAssignee } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { canAct } from '../lib/rbac';
 import AccessDeniedModal from '../components/AccessDeniedModal';
@@ -33,7 +32,6 @@ const PRIORITY_META: Record<SupportTicket['priority'], { color: string; bg: stri
 const STATUS_META: Record<SupportTicket['status'], { label: string; color: string; bg: string }> = {
   'open':        { label: 'Open',        color: GOLD,   bg: `${GOLD}20`               },
   'in-progress': { label: 'In Progress', color: PURPLE, bg: `${PURPLE}18`             },
-  'resolved':    { label: 'Resolved',    color: GREEN,  bg: 'rgba(76,175,80,0.12)'   },
   'closed':      { label: 'Closed',      color: SLATE,  bg: 'rgba(120,144,156,0.12)' },
 };
 
@@ -41,6 +39,7 @@ export default function SupportTickets() {
   const { adminUser } = useAuth();
 
   const [items,        setItems]        = useState<SupportTicket[]>([]);
+  const [assigneeList, setAssigneeList] = useState<SupportAssignee[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<SupportTicket['status'] | 'all'>('all');
@@ -70,11 +69,15 @@ export default function SupportTickets() {
   }
 
   useEffect(() => {
-    api.support.list({ limit: 100 })
-      .then(({ data }) => {
-        setItems(data);
-        setAssignees(Object.fromEntries(data.map(t => [t.id, t.assigned_to])));
-        setAssessmentDrafts(Object.fromEntries(data.map(t => [t.id, t.assessment_note ?? ''])));
+    Promise.all([
+      api.support.list({ limit: 100 }),
+      api.support.assignees(),
+    ])
+      .then(([tickets, assigneesRes]) => {
+        setItems(tickets.data);
+        setAssignees(Object.fromEntries(tickets.data.map(t => [t.id, t.assigned_to])));
+        setAssessmentDrafts(Object.fromEntries(tickets.data.map(t => [t.id, t.assessment_note ?? ''])));
+        setAssigneeList(assigneesRes.data);
       })
       .catch(err => setError(err instanceof Error ? err.message : 'Failed to load tickets'))
       .finally(() => setLoading(false));
@@ -117,16 +120,16 @@ export default function SupportTickets() {
     statusFilter === 'all' || t.status === statusFilter,
   );
 
-  const openCount     = items.filter(t => t.status === 'open').length;
-  const inProgCount   = items.filter(t => t.status === 'in-progress').length;
-  const resolvedCount = items.filter(t => t.status === 'resolved').length;
-  const urgentCount   = items.filter(t => t.priority === 'urgent' && t.status !== 'closed' && t.status !== 'resolved').length;
+  const openCount   = items.filter(t => t.status === 'open').length;
+  const inProgCount = items.filter(t => t.status === 'in-progress').length;
+  const closedCount = items.filter(t => t.status === 'closed').length;
+  const urgentCount = items.filter(t => t.priority === 'urgent' && t.status !== 'closed').length;
 
   const kpis: { label: string; value: string | number; color: string; bg: string; icon: React.ElementType }[] = [
-    { label: 'Open',        value: openCount,     color: GOLD,   bg: `${GOLD}20`,             icon: LifeBuoy    },
-    { label: 'In Progress', value: inProgCount,   color: PURPLE, bg: `${PURPLE}18`,           icon: Clock       },
-    { label: 'Resolved',    value: resolvedCount, color: GREEN,  bg: 'rgba(76,175,80,0.12)', icon: CheckCircle },
-    { label: 'Urgent',      value: urgentCount,   color: RED,    bg: 'rgba(244,67,54,0.12)', icon: AlertOctagon },
+    { label: 'Open',        value: openCount,   color: GOLD,   bg: `${GOLD}20`,             icon: LifeBuoy    },
+    { label: 'In Progress', value: inProgCount, color: PURPLE, bg: `${PURPLE}18`,           icon: Clock       },
+    { label: 'Closed',      value: closedCount, color: GREEN,  bg: 'rgba(76,175,80,0.12)', icon: CheckCircle },
+    { label: 'Urgent',      value: urgentCount, color: RED,    bg: 'rgba(244,67,54,0.12)', icon: AlertOctagon },
   ];
 
   if (loading) {
@@ -171,7 +174,7 @@ export default function SupportTickets() {
       {/* Filters */}
       <div className="flex gap-4 flex-wrap">
         <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--card)' }}>
-          {(['all', 'open', 'in-progress', 'resolved', 'closed'] as const).map(s => {
+          {(['all', 'open', 'in-progress', 'closed'] as const).map(s => {
             const active = statusFilter === s;
             const meta   = s !== 'all' ? STATUS_META[s] : null;
             return (
@@ -197,7 +200,7 @@ export default function SupportTickets() {
           const isInProg   = ticket.status === 'in-progress';
           const isExpanded = expandedIds.has(ticket.id);
           const assigneeId      = assignees[ticket.id] ?? null;
-          const assignee        = assigneeId ? POLARIS_ADMIN_USERS.find(a => a.id === assigneeId) : null;
+          const assignee        = assigneeId ? assigneeList.find(a => a.id === assigneeId) : null;
           const assessmentDraft = assessmentDrafts[ticket.id] ?? '';
           const savedAssessment = ticket.assessment_note ?? '';
           const isSavingNote    = savingNotes[ticket.id] ?? false;
@@ -340,8 +343,8 @@ export default function SupportTickets() {
                             }}
                           >
                             <option value="">Unassigned</option>
-                            {POLARIS_ADMIN_USERS.map(a => (
-                              <option key={a.id} value={a.id}>{a.full_name}</option>
+                            {assigneeList.map(a => (
+                              <option key={a.id} value={a.id}>{a.full_name ?? a.email}</option>
                             ))}
                           </select>
                           <ChevronDown
@@ -361,14 +364,7 @@ export default function SupportTickets() {
                           <button onClick={() => guardedAction(() => setShowWip(true))}
                             className="px-3 py-1.5 rounded text-xs font-semibold"
                             style={{ background: PURPLE, color: '#fff' }}>
-                            Start
-                          </button>
-                        )}
-                        {isInProg && (
-                          <button onClick={() => guardedAction(() => setShowWip(true))}
-                            className="px-3 py-1.5 rounded text-xs font-semibold"
-                            style={{ background: GREEN, color: '#fff' }}>
-                            Resolve
+                            Start Review
                           </button>
                         )}
                         {isInProg && (
