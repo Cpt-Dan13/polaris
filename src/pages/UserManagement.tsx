@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Search, Filter, UserX, UserCheck, Mail, Loader2, ChevronLeft, ChevronRight, CheckCircle2, ChevronDown } from 'lucide-react';
 import { api } from '../lib/api';
 import Badge from '../components/Badge';
+import BlurhashImg from '../components/BlurhashImg';
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
@@ -306,20 +307,21 @@ export default function UserManagement() {
                     {/* User */}
                     <td>
                       <div className="flex items-center gap-3">
-                        {user.photo_url ? (
-                          <img
-                            src={user.photo_url}
-                            alt={displayName(user)}
-                            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                          />
-                        ) : (
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                            style={{ background: 'linear-gradient(135deg, #1a1a2e, #e94560)' }}
-                          >
-                            {initials(user)}
-                          </div>
-                        )}
+                        <BlurhashImg
+                          src={user.photo_url ?? null}
+                          blurhash={user.photo_blurhash ?? null}
+                          alt={displayName(user)}
+                          size={32}
+                          className="rounded-full flex-shrink-0"
+                          fallback={
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                              style={{ background: 'linear-gradient(135deg, #1a1a2e, #e94560)' }}
+                            >
+                              {initials(user)}
+                            </div>
+                          }
+                        />
                         <div>
                           <div className="text-sm font-medium" style={{ color: 'var(--text)' }}>{displayName(user)}</div>
                           <div className="text-xs" style={{ color: 'var(--text-light)' }}>{user.email}</div>

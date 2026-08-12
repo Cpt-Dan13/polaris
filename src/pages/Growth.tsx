@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
+import BlurhashImg from '../components/BlurhashImg';
 import type { ActiveUserKPIs, TrendData, TopActiveUser, AcquisitionKPIs, AcquisitionSignups, AcquisitionRetention, MarketEntry } from '../lib/api';
 import {
   Users, TrendingUp, Activity, UserMinus, MapPin,
@@ -580,13 +581,19 @@ function ActiveUsersTab() {
                       style={{ color: i < 3 ? RANK_COLORS[i] : 'var(--text-light)' }}>
                   {i + 1}
                 </span>
-                <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
-                     style={{ background: `${typeColor}20` }}>
-                  {u.photo_url
-                    ? <img src={u.photo_url} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span style={{ fontSize: 10, fontWeight: 700, color: typeColor }}>{u.initials}</span>
+                <BlurhashImg
+                  src={u.photo_url}
+                  blurhash={u.photo_blurhash}
+                  alt={u.name}
+                  size={32}
+                  className="rounded-full flex-shrink-0"
+                  fallback={
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
+                         style={{ background: `${typeColor}20`, fontSize: 10, fontWeight: 700, color: typeColor }}>
+                      {u.initials}
+                    </div>
                   }
-                </div>
+                />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{u.name}</div>
                   <div className="text-xs" style={{ color: 'var(--text-light)' }}>

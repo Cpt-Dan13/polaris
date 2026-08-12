@@ -3,6 +3,7 @@ import {
   Award, Eye, ThumbsDown, AlertTriangle,
   SlidersHorizontal, Loader,
 } from 'lucide-react';
+import BlurhashImg from '../components/BlurhashImg';
 import { api } from '../lib/api';
 import type { ProfileAnalyticsData, DistBucket, TopPerformingEntry, MostPopularEntry, MostDislikedEntry, MostReportedEntry, ConstellationTopEntry, ConstellationPopularEntry, ConstellationReportedEntry, ConstellationDislikedEntry } from '../lib/api';
 
@@ -405,10 +406,10 @@ function StatPill({ label, value, sub }: { label: string; value: string | number
 
 // ─── Shared RankCard ──────────────────────────────────────────────────────────
 
-function RankCard({ rank, initials, name, sub, primary, primaryLabel, gradient, photoUrl, isHot, isDim, onMouseEnter, onMouseLeave }: {
+function RankCard({ rank, initials, name, sub, primary, primaryLabel, gradient, photoUrl, photoBlurhash, isHot, isDim, onMouseEnter, onMouseLeave }: {
   rank: number; initials: string; name: string; sub: string;
   primary: number; primaryLabel: string; gradient: string;
-  photoUrl?: string | null;
+  photoUrl?: string | null; photoBlurhash?: string | null;
   isHot?: boolean; isDim?: boolean;
   onMouseEnter?: () => void; onMouseLeave?: () => void;
 }) {
@@ -430,13 +431,19 @@ function RankCard({ rank, initials, name, sub, primary, primaryLabel, gradient, 
            style={{ color: RANK_COLORS[rank] ?? 'var(--text-light)' }}>
         {rank + 1}
       </div>
-      <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden"
-           style={{ background: gradient }}>
-        {photoUrl
-          ? <img src={photoUrl} alt={name} className="w-full h-full object-cover" />
-          : <span className="w-full h-full flex items-center justify-center text-xs font-bold text-white">{initials}</span>
+      <BlurhashImg
+        src={photoUrl ?? null}
+        blurhash={photoBlurhash ?? null}
+        alt={name}
+        size={36}
+        className="rounded-full flex-shrink-0"
+        fallback={
+          <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold text-white"
+               style={{ background: gradient }}>
+            {initials}
+          </div>
         }
-      </div>
+      />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{name}</div>
         <div className="text-xs truncate" style={{ color: 'var(--text-light)' }}>{sub}</div>
@@ -531,6 +538,7 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
                       primary={p.stars} primaryLabel="stars"
                       gradient={gradient}
                       photoUrl={p.photo_url}
+                      photoBlurhash={p.photo_blurhash}
                       isHot={hoveredTop === i}
                       isDim={hoveredTop !== null && hoveredTop !== i}
                       onMouseEnter={() => setHoveredTop(i)}
@@ -559,6 +567,7 @@ function ProfileTab({ data, gradient, tabKey, avgHeightCm, modeHeightCm, avgAge,
                       primary={p.views} primaryLabel="views"
                       gradient={gradient}
                       photoUrl={p.photo_url}
+                      photoBlurhash={p.photo_blurhash}
                       isHot={hoveredPop === i}
                       isDim={hoveredPop !== null && hoveredPop !== i}
                       onMouseEnter={() => setHoveredPop(i)}

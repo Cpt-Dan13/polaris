@@ -10,6 +10,7 @@ import {
   type ReportStatus,
   type ReportPriority,
 } from '../lib/api';
+import BlurhashImg from '../components/BlurhashImg';
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
@@ -93,7 +94,7 @@ function PersonChip({
   person,
   accent = false,
 }: {
-  person: { first_name: string; last_name: string | null; photo_url?: string | null } | null;
+  person: { first_name: string; last_name: string | null; photo_url?: string | null; photo_blurhash?: string | null } | null;
   accent?: boolean;
 }) {
   const name     = fullName(person);
@@ -103,25 +104,25 @@ function PersonChip({
 
   return (
     <span className="flex items-center gap-1.5 flex-shrink-0">
-      {person?.photo_url ? (
-        <img
-          src={person.photo_url}
-          alt={name}
-          className="flex-shrink-0 object-cover rounded-full"
-          style={{ width: 28, height: 28 }}
-        />
-      ) : (
-        <span
-          className="flex-shrink-0 rounded-full flex items-center justify-center font-bold"
-          style={{
-            width: 28, height: 28,
-            fontSize: 10,
-            background: accent ? `${ACCENT}25` : 'var(--border)',
-            color:      accent ? ACCENT : 'var(--text-secondary)',
-          }}>
-          {initials}
-        </span>
-      )}
+      <BlurhashImg
+        src={person?.photo_url ?? null}
+        blurhash={person?.photo_blurhash ?? null}
+        alt={name}
+        size={28}
+        className="rounded-full flex-shrink-0"
+        fallback={
+          <span
+            className="flex-shrink-0 rounded-full flex items-center justify-center font-bold"
+            style={{
+              width: 28, height: 28,
+              fontSize: 10,
+              background: accent ? `${ACCENT}25` : 'var(--border)',
+              color:      accent ? ACCENT : 'var(--text-secondary)',
+            }}>
+            {initials}
+          </span>
+        }
+      />
       <span className="text-xs font-semibold"
             style={{ color: accent ? ACCENT : 'var(--text-secondary)' }}>
         {name}

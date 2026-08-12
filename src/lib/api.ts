@@ -206,10 +206,10 @@ export interface ActiveUsersStats { dau: number; dau_last_week: number; wau: num
 
 export interface DistBucket { label: string; pct: number }
 
-export interface TopPerformingEntry         { id: string; name: string; initials: string; photo_url: string | null; stars: number; likes: number }
-export interface MostPopularEntry           { id: string; name: string; initials: string; photo_url: string | null; views: number }
-export interface MostDislikedEntry          { id: string; name: string; initials: string; photo_url: string | null; passes: number }
-export interface MostReportedEntry          { id: string; name: string; initials: string; photo_url: string | null; reports: number; blocks: number; severity: 'high' | 'medium' | 'low' }
+export interface TopPerformingEntry         { id: string; name: string; initials: string; photo_url: string | null; photo_blurhash: string | null; stars: number; likes: number }
+export interface MostPopularEntry           { id: string; name: string; initials: string; photo_url: string | null; photo_blurhash: string | null; views: number }
+export interface MostDislikedEntry          { id: string; name: string; initials: string; photo_url: string | null; photo_blurhash: string | null; passes: number }
+export interface MostReportedEntry          { id: string; name: string; initials: string; photo_url: string | null; photo_blurhash: string | null; reports: number; blocks: number; severity: 'high' | 'medium' | 'low' }
 export interface ConstellationTopEntry      { id: string; name: string; initials: string; photo_url: string | null; member_count: number; stars: number; likes: number }
 export interface ConstellationPopularEntry  { id: string; name: string; initials: string; photo_url: string | null; member_count: number; views: number }
 export interface ConstellationReportedEntry { id: string; name: string; initials: string; photo_url: string | null; member_count: number; reports: number; blocks: number; severity: 'high' | 'medium' | 'low' }
@@ -347,6 +347,7 @@ export interface TopActiveUser {
   initials:             string
   type:                 string
   photo_url:            string | null
+  photo_blurhash:       string | null
   sessions:             number
   avg_duration_seconds: number
   total_seconds:        number
@@ -479,8 +480,8 @@ export interface ChatFlag {
   detection_source:      string | null
   tech_review_requested: boolean
   created_at:            string
-  sender:   { id: string; first_name: string; last_name: string | null; photo_url?: string | null } | null
-  receiver: { id: string; first_name: string; last_name: string | null; photo_url?: string | null } | null
+  sender:   { id: string; first_name: string; last_name: string | null; photo_url?: string | null; photo_blurhash?: string | null } | null
+  receiver: { id: string; first_name: string; last_name: string | null; photo_url?: string | null; photo_blurhash?: string | null } | null
   snippet:  string | null
 }
 
@@ -524,8 +525,8 @@ export interface ModerationReport {
   status:     ReportStatus
   priority:   ReportPriority
   created_at: string
-  reporter: { id: string; first_name: string; last_name: string | null; photo_url?: string | null } | null
-  reported: { id: string; first_name: string; last_name: string | null; photo_url?: string | null } | null
+  reporter: { id: string; first_name: string; last_name: string | null; photo_url?: string | null; photo_blurhash?: string | null } | null
+  reported: { id: string; first_name: string; last_name: string | null; photo_url?: string | null; photo_blurhash?: string | null } | null
 }
 
 export interface RevenueKPIs {
