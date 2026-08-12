@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import { MessageSquare, ShieldAlert, CheckCircle, Clock, Code2, ChevronDown, ChevronLeft, ChevronRight, Hash, Clipboard, Check } from 'lucide-react';
 import { api, type ChatFlag, type ChatFlagAction, type ChatKPIs, type ChatRiskDistribution } from '../lib/api';
 import BlurhashImg from '../components/BlurhashImg';
+import { useAuth } from '../context/AuthContext';
+import { canAct } from '../lib/rbac';
+import AccessDeniedModal from '../components/AccessDeniedModal';
 
 const ACCENT = '#e94560';
 const GREEN  = '#4caf50';
@@ -148,6 +151,8 @@ function CopyButton({ id, copiedId, onCopy }: { id: string; copiedId: string | n
 const KW_PAGE_SIZE = 10;
 
 export default function ChatAssessment() {
+  const { adminUser } = useAuth();
+
   const [kpis,         setKpis]         = useState<ChatKPIs | null>(null);
   const [distribution, setDistribution] = useState<ChatRiskDistribution | null>(null);
   const [flags,        setFlags]        = useState<ChatFlag[]>([]);
@@ -155,13 +160,22 @@ export default function ChatAssessment() {
   const [error,        setError]        = useState<string | null>(null);
   const [actioning,    setActioning]    = useState<string | null>(null);
 
-  const [tab,          setTab]          = useState<'general' | 'keywords'>('general');
-  const [hoveredTab,   setHoveredTab]   = useState<'general' | 'keywords' | null>(null);
-  const [filter,       setFilter]       = useState<'all' | Severity>('all');
-  const [hoveredCat,   setHoveredCat]   = useState<string | null>(null);
-  const [resolvedOpen, setResolvedOpen] = useState(false);
-  const [copiedId,     setCopiedId]     = useState<string | null>(null);
-  const [showWipModal, setShowWipModal] = useState(false);
+  const [tab,              setTab]              = useState<'general' | 'keywords'>('general');
+  const [hoveredTab,       setHoveredTab]       = useState<'general' | 'keywords' | null>(null);
+  const [filter,           setFilter]           = useState<'all' | Severity>('all');
+  const [hoveredCat,       setHoveredCat]       = useState<string | null>(null);
+  const [resolvedOpen,     setResolvedOpen]     = useState(false);
+  const [copiedId,         setCopiedId]         = useState<string | null>(null);
+  const [showWipModal,     setShowWipModal]     = useState(false);
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
+
+  const guardedAction = (fn: () => void) => {
+    if (!canAct(adminUser?.role, 'moderator')) {
+      setShowAccessDenied(true);
+    } else {
+      fn();
+    }
+  };
 
   const copyId = useCallback((id: string) => {
     navigator.clipboard.writeText(id);
@@ -607,19 +621,19 @@ export default function ChatAssessment() {
                 {/* Actions */}
                 <div className="flex gap-2 flex-wrap items-center">
                   <button
-                    onClick={() => setShowWipModal(true)}
+                    onClick={() => guardedAction(() => setShowWipModal(true))}
                     className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
                     style={{ background: GREEN }}>
                     Approve
                   </button>
                   <button
-                    onClick={() => setShowWipModal(true)}
+                    onClick={() => guardedAction(() => setShowWipModal(true))}
                     className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
                     style={{ background: GOLD }}>
                     Escalate
                   </button>
                   <button
-                    onClick={() => setShowWipModal(true)}
+                    onClick={() => guardedAction(() => setShowWipModal(true))}
                     className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97]"
                     style={{ background: RED }}>
                     Ban User
@@ -627,7 +641,7 @@ export default function ChatAssessment() {
                   {needsTech && !flag.tech_review_requested && (
                     <button
                       disabled={isActioning}
-                      onClick={() => setShowWipModal(true)}
+                      onClick={() => guardedAction(() => setShowWipModal(true))}
                       className="px-3 py-1.5 rounded text-xs font-semibold text-white flex items-center gap-1.5 ml-auto transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
                       style={{ background: INDIGO }}>
                       <Code2 size={11} />
@@ -696,7 +710,7 @@ export default function ChatAssessment() {
                     </span>
                     {needsTech && !flag.tech_review_requested && (
                       <button
-                        onClick={() => setShowWipModal(true)}
+                        onClick={() => guardedAction(() => setShowWipModal(true))}
                         className="px-2.5 py-1 rounded text-xs font-semibold text-white flex items-center gap-1 transition-all hover:brightness-90 active:scale-[0.97]"
                         style={{ background: INDIGO }}>
                         <Code2 size={10} />
@@ -888,6 +902,14 @@ export default function ChatAssessment() {
           </div>
         </div>,
         document.body,
+      )}
+
+      {showAccessDenied && (
+        <AccessDeniedModal
+          requiredRole="moderator"
+          userRole={adminUser?.role}
+          onClose={() => setShowAccessDenied(false)}
+        />
       )}
 
     </div>

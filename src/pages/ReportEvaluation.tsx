@@ -11,6 +11,9 @@ import {
   type ReportPriority,
 } from '../lib/api';
 import BlurhashImg from '../components/BlurhashImg';
+import { useAuth } from '../context/AuthContext';
+import { canAct } from '../lib/rbac';
+import AccessDeniedModal from '../components/AccessDeniedModal';
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
@@ -148,16 +151,27 @@ function CopyButton({ id, copiedId, onCopy }: { id: string; copiedId: string | n
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ReportEvaluation() {
-  const [kpis,         setKpis]         = useState<ReportKPIs | null>(null);
-  const [breakdown,    setBreakdown]    = useState<ReportCategoryBreakdown | null>(null);
-  const [reports,      setReports]      = useState<ModerationReport[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState<string | null>(null);
-  const [actioning,    setActioning]    = useState<string | null>(null);
-  const [catFilter,    setCatFilter]    = useState('all');
-  const [hoveredCat,   setHoveredCat]   = useState<string | null>(null);
-  const [copiedId,     setCopiedId]     = useState<string | null>(null);
-  const [showWipModal, setShowWipModal] = useState(false);
+  const { adminUser } = useAuth();
+
+  const [kpis,             setKpis]             = useState<ReportKPIs | null>(null);
+  const [breakdown,        setBreakdown]        = useState<ReportCategoryBreakdown | null>(null);
+  const [reports,          setReports]          = useState<ModerationReport[]>([]);
+  const [loading,          setLoading]          = useState(true);
+  const [error,            setError]            = useState<string | null>(null);
+  const [actioning,        setActioning]        = useState<string | null>(null);
+  const [catFilter,        setCatFilter]        = useState('all');
+  const [hoveredCat,       setHoveredCat]       = useState<string | null>(null);
+  const [copiedId,         setCopiedId]         = useState<string | null>(null);
+  const [showWipModal,     setShowWipModal]     = useState(false);
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
+
+  const guardedAction = (fn: () => void) => {
+    if (!canAct(adminUser?.role, 'moderator')) {
+      setShowAccessDenied(true);
+    } else {
+      fn();
+    }
+  };
 
   const copyId = useCallback((id: string) => {
     navigator.clipboard.writeText(id);
@@ -476,7 +490,7 @@ export default function ReportEvaluation() {
                     {/* Investigate (only for open) */}
                     {r.status === 'open' && (
                       <button
-                        onClick={() => setShowWipModal(true)}
+                        onClick={() => guardedAction(() => setShowWipModal(true))}
                         className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97] focus:outline-none focus:brightness-90"
                         style={{ background: INDIGO }}>
                         Investigate
@@ -486,7 +500,7 @@ export default function ReportEvaluation() {
                     {/* Sanction actions */}
                     {SANCTION_ACTIONS.map(a => (
                       <button key={a.action}
-                        onClick={() => setShowWipModal(true)}
+                        onClick={() => guardedAction(() => setShowWipModal(true))}
                         className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97] focus:outline-none focus:brightness-90"
                         style={{ background: a.bg }}>
                         {a.label}
@@ -495,7 +509,7 @@ export default function ReportEvaluation() {
 
                     {/* Dismiss */}
                     <button
-                      onClick={() => setShowWipModal(true)}
+                      onClick={() => guardedAction(() => setShowWipModal(true))}
                       className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-all hover:brightness-90 active:scale-[0.97] focus:outline-none focus:brightness-90"
                       style={{ background: SLATE }}>
                       Dismiss
@@ -532,6 +546,14 @@ export default function ReportEvaluation() {
           </div>
         </div>,
         document.body,
+      )}
+
+      {showAccessDenied && (
+        <AccessDeniedModal
+          requiredRole="moderator"
+          userRole={adminUser?.role}
+          onClose={() => setShowAccessDenied(false)}
+        />
       )}
 
     </div>
