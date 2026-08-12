@@ -161,6 +161,15 @@ export const api = {
     assignees:  () => request<{ data: SupportAssignee[] }>('/support/assignees'),
   },
 
+  team: {
+    list: () => request<{ data: TeamMember[] }>('/team'),
+    create: (payload: { email: string; password: string; full_name: string; role: string; avatar_seed: string | null }) =>
+      request<{ data: TeamMember }>('/team', {
+        method: 'POST',
+        body:   JSON.stringify(payload),
+      }),
+  },
+
   email: {
     sendAnnouncement: (title: string, body: string, audience: string) =>
       request<{ sent_count: number; failed_count: number }>('/email/announcement', {
@@ -446,6 +455,17 @@ export interface Announcement {
   sent_by:       string | null
   sent_by_admin: { full_name: string | null } | null
   created_at:    string
+}
+
+export interface TeamMember {
+  id:           string
+  user_id:      string
+  email:        string
+  full_name:    string | null
+  role:         'viewer' | 'support' | 'moderator' | 'admin' | 'super_admin'
+  avatar_seed:  string | null
+  created_at:   string
+  last_seen_at: string | null
 }
 
 export interface AdminUser {
