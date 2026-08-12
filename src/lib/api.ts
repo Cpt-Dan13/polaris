@@ -43,6 +43,7 @@ export const api = {
     subscriptionSplit: () => request('/analytics/subscription-split'),
     swipes:            (period: 'week' | 'month' | 'year' = 'week') =>
       request<SwipeAnalyticsData>(`/analytics/swipes?period=${period}`),
+    swipesOverview:    () => request<SwipesOverview>('/analytics/swipes/overview'),
     profiles:          () => request<ProfileAnalyticsData>('/analytics/profiles'),
     insights:          () => request<ProfileInsightsData>('/analytics/insights'),
     health:            () => request<ProfileHealthData>('/analytics/insights/health'),
@@ -380,6 +381,12 @@ export interface CorrelationLifts {
   has_children:      number | null
   vices:             number | null
   height:            number | null
+}
+
+export interface SwipesOverview {
+  avg_swipes_per_dau: number
+  avg_last_week:      number
+  wow_change:         number | null
 }
 
 export interface SwipeAnalyticsData {
