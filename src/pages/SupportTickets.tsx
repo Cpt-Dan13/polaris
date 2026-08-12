@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import { LifeBuoy, AlertOctagon, Clock, CheckCircle, ChevronDown, ChevronUp, ArrowUpCircle, Copy, Check } from 'lucide-react';
 import { POLARIS_ADMIN_USERS } from '../data/sampleData';
 import { api, type SupportTicket } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import { canAct } from '../lib/rbac';
+import AccessDeniedModal from '../components/AccessDeniedModal';
 
 const ACCENT  = '#e94560';
 const GOLD    = '#c8972b';
@@ -35,6 +38,8 @@ const STATUS_META: Record<SupportTicket['status'], { label: string; color: strin
 };
 
 export default function SupportTickets() {
+  const { adminUser } = useAuth();
+
   const [items,        setItems]        = useState<SupportTicket[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState<string | null>(null);
@@ -43,9 +48,18 @@ export default function SupportTickets() {
   const [assessmentDrafts, setAssessmentDrafts] = useState<Record<string, string>>({});
   const [savingNotes,      setSavingNotes]      = useState<Record<string, boolean>>({});
   const [noteErrors,       setNoteErrors]       = useState<Record<string, string | null>>({});
-  const [copiedId,     setCopiedId]     = useState<string | null>(null);
-  const [showWip,      setShowWip]      = useState(false);
-  const [expandedIds,  setExpandedIds]  = useState<Set<string>>(new Set());
+  const [copiedId,         setCopiedId]         = useState<string | null>(null);
+  const [showWip,          setShowWip]          = useState(false);
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
+  const [expandedIds,      setExpandedIds]      = useState<Set<string>>(new Set());
+
+  const guardedAction = (fn: () => void) => {
+    if (!canAct(adminUser?.role, 'support')) {
+      setShowAccessDenied(true);
+    } else {
+      fn();
+    }
+  };
 
   function toggleExpand(id: string) {
     setExpandedIds(prev => {
@@ -344,27 +358,27 @@ export default function SupportTickets() {
                       <div className="flex gap-2 pt-1 flex-wrap"
                            style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                         {isOpen && (
-                          <button onClick={() => setShowWip(true)}
+                          <button onClick={() => guardedAction(() => setShowWip(true))}
                             className="px-3 py-1.5 rounded text-xs font-semibold"
                             style={{ background: PURPLE, color: '#fff' }}>
                             Start
                           </button>
                         )}
                         {isInProg && (
-                          <button onClick={() => setShowWip(true)}
+                          <button onClick={() => guardedAction(() => setShowWip(true))}
                             className="px-3 py-1.5 rounded text-xs font-semibold"
                             style={{ background: GREEN, color: '#fff' }}>
                             Resolve
                           </button>
                         )}
                         {isInProg && (
-                          <button onClick={() => setShowWip(true)}
+                          <button onClick={() => guardedAction(() => setShowWip(true))}
                             className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold"
                             style={{ background: GOLD, color: '#fff' }}>
                             <ArrowUpCircle size={11} /> Escalate
                           </button>
                         )}
-                        <button onClick={() => setShowWip(true)}
+                        <button onClick={() => guardedAction(() => setShowWip(true))}
                           className="px-3 py-1.5 rounded text-xs font-semibold"
                           style={{ background: SLATE, color: '#fff' }}>
                           Close
@@ -411,6 +425,14 @@ export default function SupportTickets() {
           </div>
         </div>,
         document.body,
+      )}
+
+      {showAccessDenied && (
+        <AccessDeniedModal
+          requiredRole="support"
+          userRole={adminUser?.role}
+          onClose={() => setShowAccessDenied(false)}
+        />
       )}
 
     </div>
