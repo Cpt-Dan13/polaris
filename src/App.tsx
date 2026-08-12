@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from './lib/api';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
@@ -60,6 +61,14 @@ function PageRenderer({ page }: { page: Page }) {
 function AppShell() {
   const { session, loading, verifying } = useAuth();
   const [currentPage, setCurrentPage] = useState<Page>('overview');
+
+  useEffect(() => {
+    if (!session) return;
+    const ping = () => api.presence().catch(() => {});
+    ping();
+    const id = setInterval(ping, 2 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [session]);
 
   if (loading) {
     return (

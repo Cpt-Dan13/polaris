@@ -64,6 +64,21 @@ export default function SupportTickets() {
     });
   }
 
+  async function handleAssign(ticketId: string, assigneeId: string | null) {
+    if (!canAct(adminUser?.role, 'support')) {
+      setShowAccessDenied(true);
+      return;
+    }
+    setAssignees(prev => ({ ...prev, [ticketId]: assigneeId }));
+    try {
+      await api.support.update(ticketId, { assigned_to: assigneeId });
+      setItems(prev => prev.map(t => t.id === ticketId ? { ...t, assigned_to: assigneeId } : t));
+    } catch (e) {
+      console.error('Assign failed:', e);
+      setAssignees(prev => ({ ...prev, [ticketId]: items.find(t => t.id === ticketId)?.assigned_to ?? null }));
+    }
+  }
+
   async function handleAction(id: string, patch: { status?: string; is_urgent?: boolean }) {
     setActioning(id);
     try {
@@ -347,9 +362,7 @@ export default function SupportTickets() {
                         <div className="relative">
                           <select
                             value={assigneeId ?? ''}
-                            onChange={(e) =>
-                              setAssignees(prev => ({ ...prev, [ticket.id]: e.target.value || null }))
-                            }
+                            onChange={(e) => handleAssign(ticket.id, e.target.value || null)}
                             className="w-full appearance-none text-[13px] px-2.5 pr-7 py-1.5 rounded-md"
                             style={{
                               background: 'var(--bg)',

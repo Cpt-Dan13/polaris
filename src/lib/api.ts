@@ -32,6 +32,7 @@ export const api = {
       method: 'PATCH',
       body:   JSON.stringify({ seed }),
     }),
+  presence: () => request<{ ok: boolean }>('/me/presence', { method: 'PATCH' }),
 
   analytics: {
     engagement:        () => request('/analytics/engagement'),
@@ -162,7 +163,8 @@ export const api = {
   },
 
   team: {
-    list: () => request<{ data: TeamMember[] }>('/team'),
+    list:       () => request<{ data: TeamMember[] }>('/team'),
+    monitoring: () => request<{ data: MonitoringMember[] }>('/team/monitoring'),
     create: (payload: { email: string; password: string; full_name: string; role: string; avatar_seed: string | null }) =>
       request<{ data: TeamMember }>('/team', {
         method: 'POST',
@@ -455,6 +457,24 @@ export interface Announcement {
   sent_by:       string | null
   sent_by_admin: { full_name: string | null } | null
   created_at:    string
+}
+
+export interface MonitoringTicket {
+  id:        string
+  ref:       string
+  category:  string | null
+  status:    'open' | 'in-progress'
+  is_urgent: boolean
+}
+
+export interface MonitoringMember {
+  id:             string
+  email:          string
+  full_name:      string | null
+  role:           'viewer' | 'support' | 'moderator' | 'admin' | 'super_admin'
+  avatar_seed:    string | null
+  last_seen_at:   string | null
+  active_tickets: MonitoringTicket[]
 }
 
 export interface TeamMember {
