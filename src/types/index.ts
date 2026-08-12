@@ -19,10 +19,10 @@ export type Page =
   | 'announcements'
   // Users
   | 'user-management'
-  // Bots
-  | 'bot-management'
+  // Developer
+  | 'team-registration'
   | 'vm-health'
-  | 'scheduler'
+  | 'team-monitoring'
   // System
   | 'settings';
 

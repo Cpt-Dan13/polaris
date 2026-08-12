@@ -79,8 +79,8 @@ const pageTitles: Record<string, string> = {
   'feedback':          'Feedback',
   'announcements':     'Announcements',
   'user-management':   'User Management',
-  'bot-management':    'Bot Management',
-  'scheduler':         'Scheduler',
+  'team-registration': 'Team Registration',
+  'team-monitoring':   'Team Monitoring',
   'settings':          'Settings',
 };
 

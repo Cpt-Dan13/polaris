@@ -1,10 +1,12 @@
 ﻿import {
-  LayoutDashboard, Bot, Clock,
+  LayoutDashboard, UserPlus, Activity,
   Users, Headphones, Star, Megaphone, Sparkles,
   ChevronRight, BarChart2, PieChart, TrendingDown,
   TrendingUp, CreditCard, DollarSign, ShieldAlert, ClipboardList, LifeBuoy,
 } from 'lucide-react';
 import type { Page } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { canAct } from '../lib/rbac';
 
 interface NavItem {
   id: Page;
@@ -35,8 +37,8 @@ const navItems: NavItem[] = [
 
   { id: 'user-management',     label: 'User Management',     icon: Users,           group: 'Users' },
 
-  { id: 'bot-management',      label: 'Bot Management',      icon: Bot,             group: 'Developer' },
-  { id: 'scheduler',           label: 'Scheduler',           icon: Clock,           group: 'Developer' },
+  { id: 'team-registration',   label: 'Team Registration',   icon: UserPlus,        group: 'Developer' },
+  { id: 'team-monitoring',     label: 'Team Monitoring',     icon: Activity,        group: 'Developer' },
 
 ];
 
@@ -49,6 +51,10 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentPage, onNavigate, collapsed }: SidebarProps) {
+  const { adminUser } = useAuth();
+  const isSuperAdmin  = canAct(adminUser?.role, 'super_admin');
+  const visibleItems  = navItems.filter(i => i.group !== 'Developer' || isSuperAdmin);
+
   return (
     <aside
       className="sidebar flex flex-col h-screen fixed left-0 top-0 z-30 transition-all duration-300"
@@ -68,7 +74,8 @@ export default function Sidebar({ currentPage, onNavigate, collapsed }: SidebarP
 
       <nav className="flex-1 overflow-y-auto py-3 px-2">
         {groups.map(group => {
-          const items = navItems.filter(i => i.group === group);
+          const items = visibleItems.filter(i => i.group === group);
+          if (items.length === 0) return null;
           return (
             <div key={group} className="mb-1">
               {!collapsed && (

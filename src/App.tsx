@@ -6,9 +6,9 @@ import Login from './pages/Login';
 import type { Page } from './types';
 
 import Overview from './pages/Overview';
-import BotManagement from './pages/BotManagement';
 import VMHealthMonitor from './pages/VMHealthMonitor';
-import Scheduler from './pages/Scheduler';
+import TeamRegistration from './pages/TeamRegistration';
+import TeamMonitoring from './pages/TeamMonitoring';
 import UserManagement from './pages/UserManagement';
 import CustomerService from './pages/CustomerService';
 import Feedback from './pages/Feedback';
@@ -47,10 +47,10 @@ function PageRenderer({ page }: { page: Page }) {
     case 'announcements':       return <Announcements />;
     // Users
     case 'user-management':     return <UserManagement />;
-    // Bots
-    case 'bot-management':      return <BotManagement />;
+    // Developer
+    case 'team-registration':   return <TeamRegistration />;
     case 'vm-health':           return <VMHealthMonitor />;
-    case 'scheduler':           return <Scheduler />;
+    case 'team-monitoring':     return <TeamMonitoring />;
     // System
     case 'settings':            return <Settings />;
     default:                    return <Overview />;
