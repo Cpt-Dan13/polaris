@@ -152,7 +152,7 @@ export const api = {
       )}` : ''
       return request<{ data: SupportTicket[]; count: number }>(`/support${q}`)
     },
-    update: (id: string, patch: { status?: string; assigned_to?: string | null; assessment_note?: string | null }) =>
+    update: (id: string, patch: { status?: string; priority?: string; assigned_to?: string | null; assessment_note?: string | null }) =>
       request<{ data: SupportTicket }>(`/support/${id}`, {
         method: 'PATCH',
         body:   JSON.stringify(patch),

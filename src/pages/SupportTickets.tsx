@@ -48,6 +48,7 @@ export default function SupportTickets() {
   const [savingNotes,      setSavingNotes]      = useState<Record<string, boolean>>({});
   const [noteErrors,       setNoteErrors]       = useState<Record<string, string | null>>({});
   const [copiedId,         setCopiedId]         = useState<string | null>(null);
+  const [actioning,        setActioning]        = useState<string | null>(null);
   const [showWip,          setShowWip]          = useState(false);
   const [showAccessDenied, setShowAccessDenied] = useState(false);
   const [expandedIds,      setExpandedIds]      = useState<Set<string>>(new Set());
@@ -66,6 +67,19 @@ export default function SupportTickets() {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  }
+
+  async function handleAction(id: string, patch: { status?: string; priority?: string }) {
+    setActioning(id);
+    try {
+      const { data } = await api.support.update(id, patch);
+      const updated = { ...data, status: data.status === 'in_progress' ? 'in-progress' : data.status } as SupportTicket;
+      setItems(prev => prev.map(t => t.id === id ? { ...t, ...updated } : t));
+    } catch (e) {
+      console.error('Action failed:', e);
+    } finally {
+      setActioning(null);
+    }
   }
 
   useEffect(() => {
@@ -206,10 +220,11 @@ export default function SupportTickets() {
           const isSavingNote    = savingNotes[ticket.id] ?? false;
           const noteError       = noteErrors[ticket.id] ?? null;
           const noteIsDirty     = assessmentDraft !== savedAssessment;
+          const isActioning     = actioning === ticket.id;
 
           return (
             <div key={ticket.id} className="card overflow-hidden"
-                 style={{ borderLeft: `4px solid ${pm.color}` }}>
+                 style={{ borderLeft: `4px solid ${sm.color}` }}>
 
               {/* Compact row — always visible, click to expand */}
               <button
@@ -218,7 +233,7 @@ export default function SupportTickets() {
                 style={{ background: 'transparent' }}
               >
                 <span className="font-mono text-xs font-bold flex-shrink-0"
-                      style={{ color: GOLD }}>
+                      style={{ color: sm.color }}>
                   #{ticket.ref}
                 </span>
 
@@ -361,21 +376,27 @@ export default function SupportTickets() {
                       <div className="flex gap-2 pt-1 flex-wrap"
                            style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                         {isOpen && (
-                          <button onClick={() => guardedAction(() => setShowWip(true))}
-                            className="px-3 py-1.5 rounded text-xs font-semibold"
+                          <button
+                            disabled={isActioning}
+                            onClick={() => guardedAction(() => handleAction(ticket.id, { status: 'in-progress' }))}
+                            className="px-3 py-1.5 rounded text-xs font-semibold transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
                             style={{ background: PURPLE, color: '#fff' }}>
                             Start Review
                           </button>
                         )}
-                        {isInProg && (
-                          <button onClick={() => guardedAction(() => setShowWip(true))}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold"
+                        {isInProg && ticket.priority !== 'urgent' && (
+                          <button
+                            disabled={isActioning}
+                            onClick={() => guardedAction(() => handleAction(ticket.id, { priority: 'urgent' }))}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
                             style={{ background: GOLD, color: '#fff' }}>
                             <ArrowUpCircle size={11} /> Escalate
                           </button>
                         )}
-                        <button onClick={() => guardedAction(() => setShowWip(true))}
-                          className="px-3 py-1.5 rounded text-xs font-semibold"
+                        <button
+                          disabled={isActioning}
+                          onClick={() => guardedAction(() => handleAction(ticket.id, { status: 'closed' }))}
+                          className="px-3 py-1.5 rounded text-xs font-semibold transition-all hover:brightness-90 active:scale-[0.97] disabled:opacity-50"
                           style={{ background: SLATE, color: '#fff' }}>
                           Close
                         </button>
