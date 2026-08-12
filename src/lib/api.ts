@@ -40,7 +40,7 @@ export const api = {
     activeUsers:       () => request<ActiveUsersStats>('/analytics/active-users'),
     genderSplit:       () => request('/analytics/gender-split'),
     subscribers:       () => request<SubscriberStats>('/analytics/subscribers'),
-    subscriptionSplit: () => request('/analytics/subscription-split'),
+    subscriptionSplit: () => request<SubscriptionSplit>('/analytics/subscription-split'),
     swipes:            (period: 'week' | 'month' | 'year' = 'week') =>
       request<SwipeAnalyticsData>(`/analytics/swipes?period=${period}`),
     swipesOverview:    () => request<SwipesOverview>('/analytics/swipes/overview'),
@@ -381,6 +381,12 @@ export interface CorrelationLifts {
   has_children:      number | null
   vices:             number | null
   height:            number | null
+}
+
+export interface SubscriptionSplit {
+  nova:      number
+  supernova: number
+  free:      number
 }
 
 export interface SwipesOverview {

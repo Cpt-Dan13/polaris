@@ -7,9 +7,9 @@ import {
 import StatCard from '../components/StatCard';
 import DonutChart from '../components/charts/DonutChart';
 import RevenueChart from '../components/charts/RevenueChart';
-import { overviewStats, planDistribution, revenueTrendData } from '../data/sampleData';
+import { overviewStats, revenueTrendData } from '../data/sampleData';
 import { api } from '../lib/api';
-import type { SubEvent, SubEventType, SubscriberStats, ActiveUsersStats, AcquisitionKPIs, SwipesOverview } from '../lib/api';
+import type { SubEvent, SubEventType, SubscriberStats, ActiveUsersStats, AcquisitionKPIs, SwipesOverview, SubscriptionSplit } from '../lib/api';
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
@@ -54,6 +54,7 @@ export default function Overview() {
   const [openTickets,     setOpenTickets]  = useState<number | null>(null);
   const [acqKPIs,         setAcqKPIs]      = useState<AcquisitionKPIs | null>(null);
   const [swipesOverview,  setSwipesOv]     = useState<SwipesOverview | null>(null);
+  const [subSplit,        setSubSplit]      = useState<SubscriptionSplit | null>(null);
 
   useEffect(() => {
     api.finance.subscriptionEvents()
@@ -70,6 +71,8 @@ export default function Overview() {
       .then(setAcqKPIs).catch(() => {});
     api.analytics.swipesOverview()
       .then(setSwipesOv).catch(() => {});
+    api.analytics.subscriptionSplit()
+      .then(setSubSplit).catch(() => {});
   }, []);
 
   return (
@@ -225,7 +228,16 @@ export default function Overview() {
 
         <div className="card p-5">
           <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text)' }}>Subscription Split</h2>
-          <DonutChart data={planDistribution} size={150} />
+          <DonutChart
+            size={150}
+            data={subSplit ? [
+              { label: 'Free (Orbit)', value: subSplit.free,      color: 'rgba(150,150,170,0.55)' },
+              { label: 'Nova',         value: subSplit.nova,      color: ACCENT  },
+              { label: 'Supernova',    value: subSplit.supernova, color: GOLD    },
+            ] : [
+              { label: 'Loading…', value: 1, color: 'rgba(150,150,170,0.15)' },
+            ]}
+          />
         </div>
       </div>
 
