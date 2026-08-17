@@ -99,7 +99,7 @@ export default function Settings() {
 
   return (
     <>
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5">
 
       {/* ── Profile card ── */}
       <div className="card p-5">

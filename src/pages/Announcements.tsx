@@ -117,7 +117,7 @@ export default function Announcements() {
 
   return (
     <>
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
 
       {/* ── Compose card ── */}
       <div className="card p-6 space-y-5">
