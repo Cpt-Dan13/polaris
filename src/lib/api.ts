@@ -143,7 +143,7 @@ export const api = {
   },
 
   support: {
-    list: (params?: { status?: string; priority?: string; limit?: number; offset?: number }) => {
+    list: (params?: { status?: string; priority?: string; assigned_to?: string; limit?: number; offset?: number }) => {
       const q = params ? `?${new URLSearchParams(
         Object.fromEntries(
           Object.entries(params)
@@ -165,6 +165,7 @@ export const api = {
   team: {
     list:       () => request<{ data: TeamMember[] }>('/team'),
     monitoring: () => request<{ data: MonitoringMember[] }>('/team/monitoring'),
+    getById:    (id: string) => request<{ data: TeamMember }>(`/team/${id}`),
     create: (payload: { email: string; password: string; full_name: string; role: string; avatar_seed: string | null }) =>
       request<{ data: TeamMember }>('/team', {
         method: 'POST',
@@ -190,7 +191,7 @@ export const api = {
         method: 'POST',
         body:   JSON.stringify({ title, body, audience }),
       }),
-    announcements: (params?: { limit?: number; offset?: number }) => {
+    announcements: (params?: { limit?: number; offset?: number; sent_by?: string }) => {
       const q = params ? `?${new URLSearchParams(
         Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]))
       )}` : ''

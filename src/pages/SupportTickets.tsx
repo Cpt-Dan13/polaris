@@ -5,7 +5,7 @@ import { api, type SupportTicket, type SupportAssignee } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { canAct } from '../lib/rbac';
 import AccessDeniedModal from '../components/AccessDeniedModal';
-import { useNavigation } from '../context/NavigationContext';
+import { useNavigation, type NavState } from '../context/NavigationContext';
 
 const ACCENT  = '#e94560';
 const GOLD    = '#c8972b';
@@ -33,7 +33,7 @@ const STATUS_META: Record<SupportTicket['status'], { label: string; color: strin
 
 export default function SupportTickets() {
   const { adminUser } = useAuth();
-  const { navState, setNavState } = useNavigation();
+  const { navState, setNavState, navigate } = useNavigation();
 
   const [items,        setItems]        = useState<SupportTicket[]>([]);
   const [assigneeList, setAssigneeList] = useState<SupportAssignee[]>([]);
@@ -427,6 +427,15 @@ export default function SupportTickets() {
                             />
                           )}
                         </div>
+                        {assignee && (
+                          <button
+                            onClick={() => navigate('admin-profile', { profileUserId: assignee.id, fromPage: 'support-tickets' })}
+                            className="mt-1 text-[11px] font-medium transition-opacity hover:opacity-70"
+                            style={{ color: ACCENT }}
+                          >
+                            View profile →
+                          </button>
+                        )}
                       </div>
                     </div>
 

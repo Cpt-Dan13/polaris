@@ -370,9 +370,17 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
                 </div>
 
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>
+                  <button
+                    onClick={() => {
+                      setNavState({ profileUserId: adminUser?.id, fromPage: page as import('../types').Page });
+                      onNavigate('admin-profile');
+                      setProfileOpen(false);
+                    }}
+                    className="text-sm font-semibold truncate block text-left transition-opacity hover:opacity-70"
+                    style={{ color: 'var(--text)' }}
+                  >
                     {adminUser?.full_name ?? 'Admin'}
-                  </div>
+                  </button>
                   <div className="text-xs mt-0.5 truncate capitalize" style={{ color: 'var(--text-secondary)' }}>
                     {adminUser?.role?.replace(/_/g, ' ')}
                   </div>

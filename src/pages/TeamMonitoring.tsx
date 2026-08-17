@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RefreshCw, Search } from 'lucide-react';
 import { api, type MonitoringMember, type MonitoringTicket } from '../lib/api';
 import { ROLE_LABEL, type AdminRole } from '../lib/rbac';
+import { useNavigation } from '../context/NavigationContext';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -151,6 +152,7 @@ function MemberRow({ member }: { member: MonitoringMember }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function TeamMonitoring() {
+  const { navigate } = useNavigation();
   const [members,     setMembers]     = useState<MonitoringMember[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [refreshing,  setRefreshing]  = useState(false);
@@ -289,7 +291,12 @@ export default function TeamMonitoring() {
                   </tr>
                 ) : (
                   filtered.map(m => (
-                    <tr key={m.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <tr
+                      key={m.id}
+                      onClick={() => navigate('admin-profile', { profileUserId: m.id, fromPage: 'team-monitoring' })}
+                      style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                      className="transition-opacity hover:opacity-80"
+                    >
 
                       {/* Member */}
                       <td className="px-4 py-3">

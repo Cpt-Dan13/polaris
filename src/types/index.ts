@@ -25,7 +25,9 @@ export type Page =
   | 'vm-health'
   | 'team-monitoring'
   // System
-  | 'settings';
+  | 'settings'
+  // People
+  | 'admin-profile';
 
 export interface Bot {
   id: string;

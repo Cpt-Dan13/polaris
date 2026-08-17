@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { api } from './lib/api';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { NavigationProvider } from './context/NavigationContext';
+import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import type { Page } from './types';
 
+import AdminProfile from './pages/AdminProfile';
 import Overview from './pages/Overview';
 import VMHealthMonitor from './pages/VMHealthMonitor';
 import TeamRegistration from './pages/TeamRegistration';
@@ -57,13 +58,15 @@ function PageRenderer({ page }: { page: Page }) {
     case 'team-monitoring':     return <TeamMonitoring />;
     // System
     case 'settings':            return <Settings />;
+    // People
+    case 'admin-profile':       return <AdminProfile />;
     default:                    return <Overview />;
   }
 }
 
 function AppShell() {
   const { session, loading, verifying } = useAuth();
-  const [currentPage, setCurrentPage] = useState<Page>('overview');
+  const { currentPage, navigate } = useNavigation();
 
   useEffect(() => {
     if (!session) return;
@@ -94,7 +97,7 @@ function AppShell() {
   if (!session || verifying) return <Login />;
 
   return (
-    <Layout currentPage={currentPage} onNavigate={setCurrentPage}>
+    <Layout currentPage={currentPage} onNavigate={navigate}>
       <PageRenderer page={currentPage} key={currentPage} />
     </Layout>
   );
