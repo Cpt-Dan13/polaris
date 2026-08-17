@@ -87,6 +87,7 @@ const pageTitles: Record<string, string> = {
   'team-registration': 'Team Registration',
   'team-monitoring':   'Team Monitoring',
   'settings':          'Settings',
+  'admin-profile':     'Profile',
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
