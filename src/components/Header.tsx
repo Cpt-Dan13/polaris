@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Sun, Moon, Bell, PanelLeftClose, PanelLeftOpen, Search,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { api, type AdminNotification } from '../lib/api';
 import type { Page } from '../types';
 
 // ─── Avatar config ────────────────────────────────────────────────────────────
@@ -31,15 +32,6 @@ const RED    = '#f44336';
 
 type NotifType = 'alert' | 'report' | 'payment' | 'ticket' | 'bot' | 'revenue' | 'user';
 
-interface Notification {
-  id: number;
-  type: NotifType;
-  title: string;
-  body: string;
-  time: string;
-  read: boolean;
-}
-
 const NOTIF_META: Record<NotifType, { icon: React.ElementType; color: string; bg: string }> = {
   alert:   { icon: ShieldAlert, color: RED,    bg: 'rgba(244,67,54,0.12)'  },
   report:  { icon: Flag,        color: ACCENT, bg: `${ACCENT}18`            },
@@ -50,16 +42,27 @@ const NOTIF_META: Record<NotifType, { icon: React.ElementType; color: string; bg
   user:    { icon: User,        color: GREEN,  bg: 'rgba(76,175,80,0.12)'  },
 };
 
-const INITIAL_NOTIFS: Notification[] = [
-  { id: 1, type: 'alert',   title: 'High-severity flag',       body: 'CHT-4821 flagged for harassment — 94% AI confidence',     time: '4m ago',  read: false },
-  { id: 2, type: 'report',  title: 'New critical report',      body: 'RPT-0921 filed against user_8821 — Fake Profile',          time: '18m ago', read: false },
-  { id: 3, type: 'payment', title: 'Chargeback received',      body: '$39.99 dispute opened by anon_4821 — Supernova plan',      time: '41m ago', read: false },
-  { id: 4, type: 'ticket',  title: 'Urgent support ticket',    body: 'T-1002: Cannot send messages after upgrade — Carlos M.',   time: '1h ago',  read: false },
-  { id: 5, type: 'bot',     title: 'Bot response delay',       body: 'Aurora Solstice avg response time exceeded 8s threshold',  time: '2h ago',  read: false },
-  { id: 6, type: 'revenue', title: 'Revenue milestone hit',    body: 'MTD revenue crossed $180k — highest month on record',      time: '3h ago',  read: true  },
-  { id: 7, type: 'user',    title: 'New Supernova subscriber', body: 'luna_r upgraded to Supernova — $39.99/mo',                 time: '4h ago',  read: true  },
-  { id: 8, type: 'alert',   title: 'Swipe pass rate spike',    body: 'Pass rate up 4.2pp in the last 2 hours — check Growth',   time: '5h ago',  read: true  },
-];
+// Maps server notification types → UI display type
+const SERVER_TYPE_MAP: Record<string, NotifType> = {
+  ticket_urgent:         'ticket',
+  ticket_assigned:       'ticket',
+  flag_high:             'alert',
+  flag_escalated:        'report',
+  report_critical:       'report',
+  announcement_sent:     'alert',
+  subscription_new:      'revenue',
+  subscription_cancelled:'payment',
+};
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1)   return 'just now';
+  if (mins < 60)  return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)   return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 // ─── Page titles ──────────────────────────────────────────────────────────────
 
@@ -103,12 +106,30 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
   const [signingOut,   setSigningOut]   = useState(false);
   const [showPicker,   setShowPicker]   = useState(false);
   const [savingAvatar, setSavingAvatar] = useState(false);
-  const [notifs, setNotifs]             = useState<Notification[]>(INITIAL_NOTIFS);
+  const [notifs,       setNotifs]       = useState<AdminNotification[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
 
   const notifRef   = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifs.filter(n => !n.read).length;
+
+  const fetchNotifs = useCallback(async () => {
+    try {
+      const { data } = await api.notifications.list({ limit: 20 });
+      setNotifs(data);
+    } catch {
+      // silently fail — stale notifs stay visible
+    }
+  }, []);
+
+  // Initial fetch + 30s polling
+  useEffect(() => {
+    setNotifLoading(true);
+    fetchNotifs().finally(() => setNotifLoading(false));
+    const id = setInterval(fetchNotifs, 30_000);
+    return () => clearInterval(id);
+  }, [fetchNotifs]);
 
   // Avatar initials fallback
   const initials = adminUser?.full_name
@@ -141,8 +162,15 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
     return () => document.removeEventListener('mousedown', handler);
   }, [profileOpen]);
 
-  const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, read: true })));
-  const markRead    = (id: number) => setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  const markAllRead = async () => {
+    setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+    try { await api.notifications.markAllRead(); } catch { /* optimistic, ignore */ }
+  };
+
+  const markRead = async (id: string) => {
+    setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    try { await api.notifications.markRead(id); } catch { /* optimistic, ignore */ }
+  };
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -226,16 +254,25 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
               </div>
 
               <div className="overflow-y-auto" style={{ maxHeight: 420 }}>
-                {notifs.map((n, idx) => {
-                  const meta = NOTIF_META[n.type];
-                  const Icon = meta.icon;
+                {notifLoading && notifs.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-xs" style={{ color: 'var(--text-light)' }}>
+                    Loading…
+                  </div>
+                ) : notifs.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-xs" style={{ color: 'var(--text-light)' }}>
+                    No notifications yet
+                  </div>
+                ) : notifs.map((n, idx) => {
+                  const uiType = SERVER_TYPE_MAP[n.type] ?? 'alert';
+                  const meta   = NOTIF_META[uiType];
+                  const Icon   = meta.icon;
                   return (
                     <button
                       key={n.id}
                       onClick={() => markRead(n.id)}
                       className="w-full flex items-start gap-3 px-4 py-3 text-left transition-colors"
                       style={{
-                        background: n.read ? 'transparent' : `${ACCENT}08`,
+                        background:   n.read ? 'transparent' : `${ACCENT}08`,
                         borderBottom: idx < notifs.length - 1 ? '1px solid var(--border)' : 'none',
                       }}
                     >
@@ -250,7 +287,7 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
                           {!n.read && <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />}
                         </div>
                         <div className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>{n.body}</div>
-                        <div className="text-xs mt-1" style={{ color: 'var(--text-light)' }}>{n.time}</div>
+                        <div className="text-xs mt-1" style={{ color: 'var(--text-light)' }}>{timeAgo(n.created_at)}</div>
                       </div>
                     </button>
                   );

@@ -172,6 +172,18 @@ export const api = {
       }),
   },
 
+  notifications: {
+    list: (params?: { limit?: number; offset?: number }) => {
+      const q = params ? `?${new URLSearchParams(
+        Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]))
+      )}` : ''
+      return request<{ data: AdminNotification[]; count: number }>(`/notifications${q}`)
+    },
+    unreadCount: () => request<{ count: number }>('/notifications/unread-count'),
+    markRead:    (id: string) => request<{ ok: boolean }>(`/notifications/${id}/read`, { method: 'PATCH' }),
+    markAllRead: ()           => request<{ ok: boolean }>('/notifications/read-all',   { method: 'PATCH' }),
+  },
+
   email: {
     sendAnnouncement: (title: string, body: string, audience: string) =>
       request<{ sent_count: number; failed_count: number }>('/email/announcement', {
@@ -190,6 +202,18 @@ export const api = {
         body:   JSON.stringify({ subject, body }),
       }),
   },
+}
+
+export interface AdminNotification {
+  id:              string
+  type:            string
+  title:           string
+  body:            string
+  metadata:        Record<string, unknown>
+  target_admin_id: string | null
+  read_by:         string[]
+  read:            boolean
+  created_at:      string
 }
 
 export interface SupportAssignee {
