@@ -4,6 +4,9 @@ import { Search, Filter, UserX, UserCheck, Mail, Loader2, ChevronLeft, ChevronRi
 import { api } from '../lib/api';
 import Badge from '../components/Badge';
 import BlurhashImg from '../components/BlurhashImg';
+import { useAuth } from '../context/AuthContext';
+import { canAct } from '../lib/rbac';
+import AccessDeniedModal from '../components/AccessDeniedModal';
 
 const ACCENT = '#e94560';
 const GOLD   = '#c8972b';
@@ -89,6 +92,9 @@ function userStatus(u: UserProfile): { label: string; variant: 'success' | 'warn
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function UserManagement() {
+  const { adminUser } = useAuth();
+  const isAuthorized = canAct(adminUser?.role, 'admin');
+
   const [users,        setUsers]        = useState<UserProfile[]>([]);
   const [total,        setTotal]        = useState(0);
   const [loading,      setLoading]      = useState(true);
@@ -96,7 +102,8 @@ export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [tierFilter,   setTierFilter]   = useState('all');
   const [togglingId,    setTogglingId]    = useState<string | null>(null);
-  const [showWipModal,  setShowWipModal]  = useState(false);
+  const [showWipModal,     setShowWipModal]     = useState(false);
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
   const [composeUser,   setComposeUser]   = useState<UserProfile | null>(null);
   const [compSubject,   setCompSubject]   = useState('');
   const [compBody,      setCompBody]      = useState('');
@@ -373,17 +380,15 @@ export default function UserManagement() {
                           className="p-1.5 rounded transition-colors"
                           style={{ color: 'var(--text-secondary)' }}
                           title="Email user"
-                          onClick={() => openCompose(user)}
+                          onClick={() => isAuthorized ? openCompose(user) : setShowAccessDenied(true)}
                         >
                           <Mail size={13} />
                         </button>
                         <button
                           className="p-1.5 rounded transition-colors"
-                          style={{
-                            color:  user.is_paused ? '#4caf50' : '#f44336',
-                          }}
+                          style={{ color: user.is_paused ? '#4caf50' : '#f44336' }}
                           title={user.is_paused ? 'Activate' : 'Pause'}
-                          onClick={() => setShowWipModal(true)}
+                          onClick={() => isAuthorized ? setShowWipModal(true) : setShowAccessDenied(true)}
                         >
                           {user.is_paused ? <UserCheck size={13} /> : <UserX size={13} />}
                         </button>
@@ -482,6 +487,14 @@ export default function UserManagement() {
         )}
       </div>
     </div>
+
+    {showAccessDenied && (
+      <AccessDeniedModal
+        requiredRole="admin"
+        userRole={adminUser?.role}
+        onClose={() => setShowAccessDenied(false)}
+      />
+    )}
 
     {/* Compose email modal */}
     {composeUser && createPortal(
