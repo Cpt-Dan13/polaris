@@ -66,6 +66,7 @@ export default function SupportTickets() {
   const [showWip,          setShowWip]          = useState(false);
   const [showAccessDenied, setShowAccessDenied] = useState(false);
   const [expandedIds,      setExpandedIds]      = useState<Set<string>>(new Set());
+  const [openDropdownId,   setOpenDropdownId]   = useState<string | null>(null);
 
   const guardedAction = (fn: () => void) => {
     if (!canAct(adminUser?.role, 'support')) {
@@ -211,6 +212,9 @@ export default function SupportTickets() {
 
   return (
     <div className="space-y-5">
+      {openDropdownId && (
+        <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownId(null)} />
+      )}
       <style>{`
         @keyframes ticket-highlight {
           0%   { transform: scale(1);     box-shadow: none; }
@@ -408,62 +412,102 @@ export default function SupportTickets() {
                       </div>
                       <div>
                         <div className="text-xs mb-1" style={{ color: 'var(--text-light)' }}>Assigned to</div>
-                        <div className="relative">
-                          <select
-                            value={assigneeId ?? ''}
-                            onChange={(e) => handleAssign(ticket.id, e.target.value || null)}
-                            className="w-full appearance-none text-[13px] px-2.5 pr-7 py-1.5 rounded-md"
+                        {/* Custom assignee dropdown */}
+                        <div className="relative z-50">
+                          {/* Trigger */}
+                          <div
+                            className="w-full flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[13px]"
                             style={{
-                              background:  'var(--bg)',
-                              border:      assignedSuccess[ticket.id] ? `1px solid ${GREEN}` : '1px solid var(--border)',
-                              color:       assignee ? 'var(--text)' : 'var(--text-secondary)',
-                              outline:     'none',
-                              cursor:      'pointer',
-                              transition:  'border-color 0.3s ease',
+                              background: 'var(--bg)',
+                              border:     assignedSuccess[ticket.id] ? `1px solid ${GREEN}` : '1px solid var(--border)',
+                              color:      assignee ? 'var(--text)' : 'var(--text-secondary)',
+                              transition: 'border-color 0.3s ease',
                             }}
                           >
-                            <option value="">Unassigned</option>
-                            {assigneeList.map(a => (
-                              <option key={a.id} value={a.id}>{a.full_name ?? a.email}</option>
-                            ))}
-                          </select>
-                          {assignedSuccess[ticket.id] ? (
-                            <Check
-                              size={11}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
-                              style={{ color: GREEN }}
-                            />
-                          ) : (
-                            <ChevronDown
-                              size={11}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
-                              style={{ color: 'var(--text-light)' }}
-                            />
-                          )}
-                        </div>
-                        {assignee && (
-                          <button
-                            onClick={() => navigate('admin-profile', { profileUserId: assignee.id, fromPage: 'support-tickets' })}
-                            className="mt-1.5 flex items-center gap-1.5 max-w-full transition-opacity hover:opacity-70"
-                          >
+                            {assignee ? (
+                              <>
+                                {/* Left: avatar + name — click to navigate to profile */}
+                                <button
+                                  onClick={() => navigate('admin-profile', { profileUserId: assignee.id, fromPage: 'support-tickets' })}
+                                  className="flex items-center gap-2 flex-1 min-w-0 transition-opacity hover:opacity-75"
+                                >
+                                  <div
+                                    className="flex items-center justify-center rounded-full flex-shrink-0"
+                                    style={{
+                                      width: 18, height: 18,
+                                      background: assigneeAvatarColor(assignee.full_name ?? assignee.email),
+                                      fontSize: 8, fontWeight: 700, color: '#fff',
+                                    }}
+                                  >
+                                    {getInitials(assignee.full_name ?? assignee.email)}
+                                  </div>
+                                  <span className="truncate text-left">{assignee.full_name ?? assignee.email}</span>
+                                </button>
+                                {/* Right: chevron — open/close dropdown */}
+                                <button
+                                  onClick={() => setOpenDropdownId(openDropdownId === ticket.id ? null : ticket.id)}
+                                  className="flex-shrink-0 p-0.5 rounded transition-colors hover:bg-[var(--border)]"
+                                  style={{ color: assignedSuccess[ticket.id] ? GREEN : 'var(--text-light)', cursor: 'pointer' }}
+                                >
+                                  {assignedSuccess[ticket.id] ? <Check size={11} /> : <ChevronDown size={11} />}
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => setOpenDropdownId(openDropdownId === ticket.id ? null : ticket.id)}
+                                className="flex items-center justify-between w-full"
+                                style={{ cursor: 'pointer' }}
+                              >
+                                <span>Unassigned</span>
+                                <ChevronDown size={11} style={{ color: 'var(--text-light)' }} />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Options panel */}
+                          {openDropdownId === ticket.id && (
                             <div
-                              className="flex items-center justify-center rounded-full flex-shrink-0"
+                              className="absolute left-0 right-0 top-full mt-1 rounded-md overflow-hidden"
                               style={{
-                                width: 18, height: 18,
-                                background: assigneeAvatarColor(assignee.full_name ?? assignee.email),
-                                fontSize: 8, fontWeight: 700, color: '#fff', letterSpacing: '0.03em',
+                                background:  'var(--card)',
+                                border:      '1px solid var(--border)',
+                                boxShadow:   '0 4px 16px rgba(0,0,0,0.18)',
+                                zIndex:      50,
                               }}
                             >
-                              {getInitials(assignee.full_name ?? assignee.email)}
+                              <button
+                                onClick={() => { handleAssign(ticket.id, null); setOpenDropdownId(null); }}
+                                className="w-full flex items-center px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--bg)]"
+                                style={{ color: 'var(--text-secondary)' }}
+                              >
+                                Unassigned
+                              </button>
+                              {assigneeList.map(a => (
+                                <button
+                                  key={a.id}
+                                  onClick={() => { handleAssign(ticket.id, a.id); setOpenDropdownId(null); }}
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--bg)]"
+                                  style={{
+                                    color:      'var(--text)',
+                                    background: a.id === assigneeId ? 'var(--bg)' : 'transparent',
+                                  }}
+                                >
+                                  <div
+                                    className="flex items-center justify-center rounded-full flex-shrink-0"
+                                    style={{
+                                      width: 18, height: 18,
+                                      background: assigneeAvatarColor(a.full_name ?? a.email),
+                                      fontSize: 8, fontWeight: 700, color: '#fff',
+                                    }}
+                                  >
+                                    {getInitials(a.full_name ?? a.email)}
+                                  </div>
+                                  <span className="truncate">{a.full_name ?? a.email}</span>
+                                </button>
+                              ))}
                             </div>
-                            <span
-                              className="text-[12px] font-medium truncate"
-                              style={{ color: 'var(--text)' }}
-                            >
-                              {assignee.full_name ?? assignee.email}
-                            </span>
-                          </button>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -488,7 +532,7 @@ export default function SupportTickets() {
                             background: RED,
                             color:      '#fff',
                           }}>
-                          {ticket.is_urgent ? 'Urgent ✕' : 'Mark Urgent'}
+                          {ticket.is_urgent ? 'Unmark as Urgent' : 'Mark Urgent'}
                         </button>
                         <button
                           disabled={isActioning}
