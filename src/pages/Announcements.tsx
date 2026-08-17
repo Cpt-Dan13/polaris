@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Megaphone, Send, Users, Globe, Loader2, CheckCircle2, ChevronDown } from 'lucide-react';
 import { api, type Announcement } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import { canAct } from '../lib/rbac';
+import AccessDeniedModal from '../components/AccessDeniedModal';
 
 const ACCENT  = '#e94560';
 const INDIGO  = '#6366f1';
@@ -57,6 +60,9 @@ function formatDate(iso: string) {
 }
 
 export default function Announcements() {
+  const { adminUser } = useAuth();
+  const isAuthorized = canAct(adminUser?.role, 'admin');
+
   const [title,        setTitle]        = useState('');
   const [body,         setBody]         = useState('');
   const [audience,     setAudience]     = useState<AudienceValue>('all');
@@ -65,6 +71,7 @@ export default function Announcements() {
   const [sentResult,   setSentResult]   = useState<{ sent_count: number; failed_count: number } | null>(null);
   const [sendError,    setSendError]    = useState<string | null>(null);
   const [showWipModal, setShowWipModal] = useState(false);
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
 
   const [history,        setHistory]        = useState<Announcement[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
@@ -77,6 +84,7 @@ export default function Announcements() {
   }, []);
 
   const handleSend = async () => {
+    if (!isAuthorized) { setShowAccessDenied(true); return; }
     if (!title.trim() || !body.trim()) return;
     setSending(true);
     setSendError(null);
@@ -247,7 +255,7 @@ export default function Announcements() {
             {sending ? 'Sending…' : 'Send Announcement'}
           </button>
           <button
-            onClick={() => setShowWipModal(true)}
+            onClick={() => isAuthorized ? setShowWipModal(true) : setShowAccessDenied(true)}
             className="px-5 py-2.5 rounded-md text-sm font-medium transition-all"
             style={{ background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
           >
@@ -301,6 +309,14 @@ export default function Announcements() {
       </div>
 
     </div>
+
+    {showAccessDenied && (
+      <AccessDeniedModal
+        requiredRole="admin"
+        userRole={adminUser?.role}
+        onClose={() => setShowAccessDenied(false)}
+      />
+    )}
 
     {/* WIP modal — Save Draft */}
     {showWipModal && createPortal(
