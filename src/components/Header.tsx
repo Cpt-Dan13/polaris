@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Sun, Moon, Bell, PanelLeftClose, PanelLeftOpen, Search,
+  Sun, Moon, Bell, BellOff, PanelLeftClose, PanelLeftOpen, Search,
   ShieldAlert, Flag, DollarSign, LifeBuoy, Bot, TrendingUp, User,
   Settings, LogOut, Pencil,
 } from 'lucide-react';
@@ -115,7 +115,20 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
   const notifRef   = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifs.filter(n => !n.read).length;
+  const isMuted = (() => {
+    try {
+      const raw = localStorage.getItem('polaris_notif_mute');
+      if (!raw) return false;
+      const { until } = JSON.parse(raw) as { until: string | null };
+      if (until && new Date(until) <= new Date()) {
+        localStorage.removeItem('polaris_notif_mute');
+        return false;
+      }
+      return true;
+    } catch { return false; }
+  })();
+
+  const unreadCount = isMuted ? 0 : notifs.filter(n => !n.read).length;
 
   const fetchNotifs = useCallback(async () => {
     try {
@@ -224,7 +237,7 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
             className="relative p-2 rounded-md transition-colors"
             style={{ color: notifOpen ? ACCENT : 'var(--text-secondary)' }}
           >
-            <Bell size={18} />
+            {isMuted ? <BellOff size={18} /> : <Bell size={18} />}
             {unreadCount > 0 && (
               <span
                 className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-white"

@@ -1,10 +1,40 @@
 ﻿import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Palette, Pencil, User } from 'lucide-react';
+import { Bell, BellOff, Palette, Pencil, User } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
 const ACCENT = '#e94560';
+const SLATE  = '#78909c';
+
+const MUTE_DURATIONS = [
+  { label: '1 hour',      ms: 1 * 60 * 60 * 1000  },
+  { label: '4 hours',     ms: 4 * 60 * 60 * 1000  },
+  { label: '8 hours',     ms: 8 * 60 * 60 * 1000  },
+  { label: 'Indefinitely', ms: null                },
+] as const;
+
+const MUTE_KEY = 'polaris_notif_mute';
+
+function readMuteState(): { muted: boolean; until: Date | null } {
+  try {
+    const raw = localStorage.getItem(MUTE_KEY);
+    if (!raw) return { muted: false, until: null };
+    const { until } = JSON.parse(raw) as { until: string | null };
+    if (until && new Date(until) <= new Date()) {
+      localStorage.removeItem(MUTE_KEY);
+      return { muted: false, until: null };
+    }
+    return { muted: true, until: until ? new Date(until) : null };
+  } catch {
+    return { muted: false, until: null };
+  }
+}
+
+function formatMuteUntil(until: Date | null): string {
+  if (!until) return 'Muted indefinitely';
+  return `Muted until ${until.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+}
 
 const AVATAR_SEEDS = [
   'Nova', 'Orion', 'Lyra', 'Vega', 'Draco',
@@ -22,6 +52,31 @@ export default function Settings() {
   const { adminUser, updateAvatar } = useAuth();
   const [showPicker,   setShowPicker]   = useState(false);
   const [savingAvatar, setSavingAvatar] = useState(false);
+
+  const initial = readMuteState();
+  const [muted,     setMuted]     = useState(initial.muted);
+  const [muteUntil, setMuteUntil] = useState<Date | null>(initial.until);
+
+  function applyMute(ms: number | null) {
+    const until = ms !== null ? new Date(Date.now() + ms) : null;
+    localStorage.setItem(MUTE_KEY, JSON.stringify({ until: until?.toISOString() ?? null }));
+    setMuteUntil(until);
+    setMuted(true);
+  }
+
+  function unmute() {
+    localStorage.removeItem(MUTE_KEY);
+    setMuted(false);
+    setMuteUntil(null);
+  }
+
+  function toggleMute() {
+    if (muted) {
+      unmute();
+    } else {
+      applyMute(null); // default: indefinite
+    }
+  }
 
   const initials = adminUser?.full_name
     ? adminUser.full_name.charAt(0).toUpperCase()
@@ -124,6 +179,79 @@ export default function Settings() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* ── Notifications card ── */}
+      <div className="card p-5 space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
+          <span style={{ color: muted ? SLATE : ACCENT }}>
+            {muted ? <BellOff size={15} /> : <Bell size={15} />}
+          </span>
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Notifications</h2>
+          {muted && (
+            <span
+              className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ background: 'rgba(120,144,156,0.15)', color: SLATE }}
+            >
+              {formatMuteUntil(muteUntil)}
+            </span>
+          )}
+        </div>
+
+        {/* Toggle row */}
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium" style={{ color: 'var(--text)' }}>Mute Notifications</div>
+            <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+              {muted
+                ? formatMuteUntil(muteUntil)
+                : 'You will receive all admin notifications'}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+              {muted ? 'Muted' : 'Active'}
+            </span>
+            <button
+              onClick={toggleMute}
+              className="relative inline-flex h-5 w-9 rounded-full transition-colors"
+              style={{ background: muted ? SLATE : ACCENT }}
+            >
+              <span
+                className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform"
+                style={{ transform: muted ? 'translateX(16px)' : 'translateX(0)' }}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Duration chips — only when muted */}
+        {muted && (
+          <div>
+            <div className="text-xs mb-2" style={{ color: 'var(--text-light)' }}>Mute for</div>
+            <div className="flex gap-2 flex-wrap">
+              {MUTE_DURATIONS.map(d => {
+                const active = d.ms === null
+                  ? muteUntil === null
+                  : muteUntil !== null && Math.abs(muteUntil.getTime() - Date.now() - d.ms) < 5000;
+                return (
+                  <button
+                    key={d.label}
+                    onClick={() => applyMute(d.ms)}
+                    className="px-3 py-1.5 rounded-md text-xs font-semibold transition-all"
+                    style={{
+                      background: active ? SLATE            : 'var(--bg)',
+                      color:      active ? '#fff'           : 'var(--text-secondary)',
+                      border:     `1px solid ${active ? SLATE : 'var(--border)'}`,
+                    }}
+                  >
+                    {d.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
     </div>
