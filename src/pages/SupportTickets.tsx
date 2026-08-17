@@ -23,6 +23,20 @@ function formatDate(raw: string): string {
   });
 }
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase();
+}
+
+function assigneeAvatarColor(name: string): string {
+  const PALETTE = ['#6366f1','#e94560','#0ea5e9','#10b981','#f59e0b','#8b5cf6','#ec4899'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return PALETTE[hash % PALETTE.length];
+}
+
 const URGENT_META = { color: RED, bg: 'rgba(244,67,54,0.12)' };
 
 const STATUS_META: Record<SupportTicket['status'], { label: string; color: string; bg: string }> = {
@@ -430,10 +444,24 @@ export default function SupportTickets() {
                         {assignee && (
                           <button
                             onClick={() => navigate('admin-profile', { profileUserId: assignee.id, fromPage: 'support-tickets' })}
-                            className="mt-1 text-[11px] font-medium transition-opacity hover:opacity-70"
-                            style={{ color: ACCENT }}
+                            className="mt-1.5 flex items-center gap-1.5 max-w-full transition-opacity hover:opacity-70"
                           >
-                            View profile →
+                            <div
+                              className="flex items-center justify-center rounded-full flex-shrink-0"
+                              style={{
+                                width: 18, height: 18,
+                                background: assigneeAvatarColor(assignee.full_name ?? assignee.email),
+                                fontSize: 8, fontWeight: 700, color: '#fff', letterSpacing: '0.03em',
+                              }}
+                            >
+                              {getInitials(assignee.full_name ?? assignee.email)}
+                            </div>
+                            <span
+                              className="text-[12px] font-medium truncate"
+                              style={{ color: 'var(--text)' }}
+                            >
+                              {assignee.full_name ?? assignee.email}
+                            </span>
                           </button>
                         )}
                       </div>
