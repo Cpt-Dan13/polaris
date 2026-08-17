@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LifeBuoy, AlertOctagon, Clock, CheckCircle, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
 import { api, type SupportTicket, type SupportAssignee } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { canAct } from '../lib/rbac';
 import AccessDeniedModal from '../components/AccessDeniedModal';
+import { useNavigation } from '../context/NavigationContext';
 
 const ACCENT  = '#e94560';
 const GOLD    = '#c8972b';
@@ -32,6 +33,7 @@ const STATUS_META: Record<SupportTicket['status'], { label: string; color: strin
 
 export default function SupportTickets() {
   const { adminUser } = useAuth();
+  const { navState, setNavState } = useNavigation();
 
   const [items,        setItems]        = useState<SupportTicket[]>([]);
   const [assigneeList, setAssigneeList] = useState<SupportAssignee[]>([]);
@@ -44,6 +46,9 @@ export default function SupportTickets() {
   const [noteErrors,       setNoteErrors]       = useState<Record<string, string | null>>({});
   const [copiedId,         setCopiedId]         = useState<string | null>(null);
   const [actioning,        setActioning]        = useState<string | null>(null);
+  const [assignedSuccess,  setAssignedSuccess]  = useState<Record<string, boolean>>({});
+  const [highlightedId,    setHighlightedId]    = useState<string | null>(null);
+  const ticketRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [showWip,          setShowWip]          = useState(false);
   const [showAccessDenied, setShowAccessDenied] = useState(false);
   const [expandedIds,      setExpandedIds]      = useState<Set<string>>(new Set());
@@ -73,6 +78,8 @@ export default function SupportTickets() {
     try {
       await api.support.update(ticketId, { assigned_to: assigneeId });
       setItems(prev => prev.map(t => t.id === ticketId ? { ...t, assigned_to: assigneeId } : t));
+      setAssignedSuccess(prev => ({ ...prev, [ticketId]: true }));
+      setTimeout(() => setAssignedSuccess(prev => ({ ...prev, [ticketId]: false })), 2000);
     } catch (e) {
       console.error('Assign failed:', e);
       setAssignees(prev => ({ ...prev, [ticketId]: items.find(t => t.id === ticketId)?.assigned_to ?? null }));
@@ -106,6 +113,19 @@ export default function SupportTickets() {
       .catch(err => setError(err instanceof Error ? err.message : 'Failed to load tickets'))
       .finally(() => setLoading(false));
   }, []);
+
+  // Deep-link: expand + highlight a specific ticket from a notification click
+  useEffect(() => {
+    const id = navState?.highlightTicketId;
+    if (!id) return;
+    setNavState(null);
+    setExpandedIds(prev => new Set([...prev, id]));
+    setHighlightedId(id);
+    setTimeout(() => {
+      ticketRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+    setTimeout(() => setHighlightedId(null), 1800);
+  }, [navState, setNavState]);
 
   function copyEmail(id: string, email: string) {
     navigator.clipboard.writeText(email);
@@ -177,6 +197,15 @@ export default function SupportTickets() {
 
   return (
     <div className="space-y-5">
+      <style>{`
+        @keyframes ticket-highlight {
+          0%   { transform: scale(1);     box-shadow: none; }
+          25%  { transform: scale(1.012); box-shadow: 0 0 0 2px #e94560; }
+          75%  { transform: scale(1.012); box-shadow: 0 0 0 2px #e94560; }
+          100% { transform: scale(1);     box-shadow: none; }
+        }
+        .ticket-highlight { animation: ticket-highlight 1.5s ease-out forwards; }
+      `}</style>
 
       {/* KPI Pills */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -239,9 +268,15 @@ export default function SupportTickets() {
           const noteIsDirty     = assessmentDraft !== savedAssessment;
           const isActioning     = actioning === ticket.id;
 
+          const isHighlighted = highlightedId === ticket.id;
+
           return (
-            <div key={ticket.id} className="card overflow-hidden"
-                 style={{ borderLeft: `4px solid ${sm.color}` }}>
+            <div
+              key={ticket.id}
+              ref={el => { ticketRefs.current[ticket.id] = el; }}
+              className={`card overflow-hidden${isHighlighted ? ' ticket-highlight' : ''}`}
+              style={{ borderLeft: `4px solid ${sm.color}` }}
+            >
 
               {/* Compact row — always visible, click to expand */}
               <button
@@ -365,11 +400,12 @@ export default function SupportTickets() {
                             onChange={(e) => handleAssign(ticket.id, e.target.value || null)}
                             className="w-full appearance-none text-[13px] px-2.5 pr-7 py-1.5 rounded-md"
                             style={{
-                              background: 'var(--bg)',
-                              border:     '1px solid var(--border)',
-                              color:      assignee ? 'var(--text)' : 'var(--text-secondary)',
-                              outline:    'none',
-                              cursor:     'pointer',
+                              background:  'var(--bg)',
+                              border:      assignedSuccess[ticket.id] ? `1px solid ${GREEN}` : '1px solid var(--border)',
+                              color:       assignee ? 'var(--text)' : 'var(--text-secondary)',
+                              outline:     'none',
+                              cursor:      'pointer',
+                              transition:  'border-color 0.3s ease',
                             }}
                           >
                             <option value="">Unassigned</option>
@@ -377,11 +413,19 @@ export default function SupportTickets() {
                               <option key={a.id} value={a.id}>{a.full_name ?? a.email}</option>
                             ))}
                           </select>
-                          <ChevronDown
-                            size={11}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
-                            style={{ color: 'var(--text-light)' }}
-                          />
+                          {assignedSuccess[ticket.id] ? (
+                            <Check
+                              size={11}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
+                              style={{ color: GREEN }}
+                            />
+                          ) : (
+                            <ChevronDown
+                              size={11}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
+                              style={{ color: 'var(--text-light)' }}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>

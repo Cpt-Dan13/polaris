@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useNavigation } from '../context/NavigationContext';
 import { api, type AdminNotification } from '../lib/api';
 import type { Page } from '../types';
 
@@ -100,6 +101,7 @@ interface HeaderProps {
 export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavigate }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const { adminUser, signOut, updateAvatar } = useAuth();
+  const { setNavState } = useNavigation();
 
   const [notifOpen,    setNotifOpen]    = useState(false);
   const [profileOpen,  setProfileOpen]  = useState(false);
@@ -269,7 +271,14 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
                   return (
                     <button
                       key={n.id}
-                      onClick={() => markRead(n.id)}
+                      onClick={() => {
+                        markRead(n.id);
+                        if (n.type === 'ticket_assigned' && n.metadata?.ticket_id) {
+                          setNavState({ highlightTicketId: n.metadata.ticket_id as string });
+                          onNavigate('support-tickets');
+                          setNotifOpen(false);
+                        }
+                      }}
                       className="w-full flex items-start gap-3 px-4 py-3 text-left transition-colors"
                       style={{
                         background:   n.read ? 'transparent' : `${ACCENT}08`,
@@ -286,7 +295,7 @@ export default function Header({ page, sidebarCollapsed, onToggleSidebar, onNavi
                           </span>
                           {!n.read && <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />}
                         </div>
-                        <div className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>{n.body}</div>
+                        <div className="text-xs italic" style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>{n.body}</div>
                         <div className="text-xs mt-1" style={{ color: 'var(--text-light)' }}>{timeAgo(n.created_at)}</div>
                       </div>
                     </button>

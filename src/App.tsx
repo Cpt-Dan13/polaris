@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from './lib/api';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NavigationProvider } from './context/NavigationContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import type { Page } from './types';
@@ -103,7 +104,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppShell />
+        <NavigationProvider>
+          <AppShell />
+        </NavigationProvider>
       </AuthProvider>
     </ThemeProvider>
   );
